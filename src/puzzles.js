@@ -71,7 +71,8 @@ export function startAttempt(db,user,mode,category){
     const p=selectPuzzle(db,user,mode,category);
     const id=randomUUID(),now=Date.now();
     // The previous task may be revisited later; skipped tasks cannot grant points.
-    db.prepare("UPDATE attempts SET status='skipped',updated_at=? WHERE user_id=? AND status='active'").run(now,user.id);
+    const skipped=db.prepare("UPDATE attempts SET status='skipped',updated_at=? WHERE user_id=? AND status='active'").run(now,user.id);
+    if(skipped.changes) db.prepare('UPDATE users SET clean_streak=0 WHERE id=?').run(user.id);
     db.prepare("INSERT INTO attempts(id,user_id,puzzle_id,current_fen,started_at,updated_at) VALUES(?,?,?,?,?,?)").run(id,user.id,p.id,p.fen,now,now);
     return db.prepare("SELECT attempts.*,puzzles.category,puzzles.rating,puzzles.source FROM attempts JOIN puzzles ON puzzles.id=attempts.puzzle_id WHERE attempts.id=?").get(id);
   });
@@ -108,6 +109,9 @@ export function submitMove(db,user,attemptId,uci){
       const done=db.prepare('INSERT OR IGNORE INTO completions(user_id,puzzle_id,points,solved_at) VALUES(?,?,?,?)').run(user.id,p.id,earned,Date.now());
       if(done.changes){
         firstSolve=true;
+        const clean=+(a.errors===0 && a.hints===0);
+        db.prepare(`UPDATE users SET clean_streak=CASE WHEN ?=1 THEN clean_streak+1 ELSE 0 END,
+          best_streak=MAX(best_streak,CASE WHEN ?=1 THEN clean_streak+1 ELSE 0 END) WHERE id=?`).run(clean,clean,user.id);
         const expected=1/(1+Math.pow(10,(p.rating-user.skill_rating)/400));
         const performance=a.hints?0.7:a.errors>1?0.6:1;
         const delta=Math.round(24*(performance-expected));

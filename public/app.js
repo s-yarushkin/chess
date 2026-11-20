@@ -1,38 +1,95 @@
-import {parseFen,legal,key,side,index,apply,fenOf} from '/chess.js';
+import {parseFen,legal,key,side,apply} from '/chess.js';
+import {attackersToKing,encouragement} from '/fun.js';
+
 const $=id=>document.getElementById(id);
 const GLYPHS={K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟︎',k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟︎'};
+const PIECES={k:'король',q:'ферзь',r:'ладья',b:'слон',n:'конь',p:'пешка'};
 const labels={progressive:'По порядку',mate1:'Мат в один ход',mate2:'Мат в два хода',mate3:'Мат в три хода',draw:'Спаси ничью'};
-const state={token:sessionStorage.getItem('chess_session')||'',me:null,attempt:null,selected:-1,mode:'progressive',busy:false,hint:null};
-let lastSound=null;
+const points={mate1:1,mate2:2,mate3:3,draw:3};
+const state={token:sessionStorage.getItem('chess_session')||'',me:null,attempt:null,selected:-1,mode:'progressive',busy:false,lastMove:[],hints:0};
 const tg=window.Telegram?.WebApp;
+const prefersReduce=window.matchMedia?.('(prefers-reduced-motion: reduce)');
+const setting=(k,otherwise)=>{try{return localStorage.getItem(k)===null?otherwise:localStorage.getItem(k)==='true';}catch{return otherwise;}};
+const prefs={sound:setting('chess_sound',false),effects:setting('chess_effects',true)};
+let audio=null,toastTimer,fxTimer,fxSequence=0;
 try{tg?.ready();tg?.expand();}catch{}
+
 async function api(path,options={}){
  const res=await fetch(path,{...options,headers:{'Content-Type':'application/json',...(state.token?{'Authorization':'Bearer '+state.token}:{}),...options.headers}});
- const data=await res.json();if(!res.ok)throw Error(data.error||'Ошибка соединения');return data;
+ let data;try{data=await res.json();}catch{throw Error('Не удалось получить ответ сервера');}
+ if(!res.ok)throw Error(data.error||'Ошибка соединения');return data;
 }
-function notice(text,type=''){const box=$('notice');box.className='notice '+type;box.textContent=text;}
-let toastTimer;
-function toast(s){const box=$('toast');box.textContent=s;box.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>box.classList.remove('show'),2000);}
+function setPreference(name,on){prefs[name]=on;try{localStorage.setItem('chess_'+name,String(on));}catch{}renderPreferences();}
+function renderPreferences(){
+ const b=$('soundButton');b.textContent=prefs.sound?'♫':'♪';b.setAttribute('aria-pressed',String(prefs.sound));b.setAttribute('aria-label',prefs.sound?'Выключить звук':'Включить звук');b.title=prefs.sound?'Звук включён':'Звук выключен';
+ const f=$('effectsButton');f.textContent=prefs.effects?'✨':'✧';f.setAttribute('aria-pressed',String(prefs.effects));f.setAttribute('aria-label',prefs.effects?'Отключить эффекты':'Включить эффекты');f.title=prefs.effects?'Эффекты включены':'Эффекты выключены';
+}
+function sound(type){
+ if(!prefs.sound)return;
+ try{
+  audio=audio||new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')void audio.resume();
+  const tones=type==='success'?[392,523,659,784]:type==='error'?[180,145]:[390];
+  tones.forEach((hz,i)=>{const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=hz;const t=audio.currentTime+i*.11;
+   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.032,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+.19);
+   o.connect(g).connect(audio.destination);o.start(t);o.stop(t+.2);});
+ }catch{}
+}
+function haptic(type){try{tg?.HapticFeedback?.notificationOccurred(type);}catch{}}
+function notice(message,type=''){const b=$('notice');b.className='notice '+type;b.textContent=message;}
+function toast(message){const b=$('toast');b.textContent=message;b.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>b.classList.remove('show'),2700);}
+function sqName(i){return 'abcdefgh'[i&7]+(8-(i>>4));}
+function buttonStatus(){const active=state.attempt?.status==='active';$('hint').disabled=state.busy||!active;$('skip').disabled=state.busy||!active;$('next').disabled=state.busy||!state.attempt||active;}
+
 function board(){
  const s=state.attempt?parseFen(state.attempt.position):parseFen('4k3/8/8/8/8/8/8/4K3 w - - 0 1');
- const moves=legal(s),targets=new Set(moves.filter(m=>m[0]===state.selected).map(m=>m[1]));const frag=document.createDocumentFragment();
+ const moves=state.attempt?.status==='active'?legal(s):[];
+ const targets=new Set(moves.filter(m=>m[0]===state.selected).map(m=>m[1]));const frag=document.createDocumentFragment();
  for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++){
-  const i=rank*16+file,p=s.b[i],white=side(p)===1,btn=document.createElement('button');btn.type='button';btn.className='square '+((rank+file)%2===0?'light':'dark');btn.setAttribute('role','gridcell');
-  if(i===state.selected)btn.classList.add('selected');if(targets.has(i))btn.classList.add(p==='.'?'target':'capture');
-  if(p!=='.'){const span=document.createElement('span');span.textContent=GLYPHS[p];span.className='piece '+(white?'white':'black');btn.append(span);const mark=document.createElement('span');mark.textContent=white?'Б':'Ч';mark.className='team '+(white?'white':'black');btn.append(mark);}
-  if(file===0){const co=document.createElement('span');co.className='coord';co.textContent=8-rank;btn.append(co);}if(rank===7){const co=document.createElement('span');co.className='coord file';co.textContent='abcdefgh'[file];btn.append(co);}
-  btn.setAttribute('aria-label',`${p==='.'?'Пустая клетка':(white?'Белая ':'Чёрная ')+p} ${'abcdefgh'[file]}${8-rank}`);btn.addEventListener('click',()=>choose(i));frag.append(btn);
+  const i=rank*16+file,p=s.b[i],white=side(p)===1,btn=document.createElement('button');btn.type='button';
+  btn.className='square '+((rank+file)%2===0?'light':'dark');btn.setAttribute('role','gridcell');
+  if(i===state.selected)btn.classList.add('selected');if(state.lastMove.includes(i))btn.classList.add('last-move');
+  if(targets.has(i))btn.classList.add(p==='.'?'target':'capture');
+  if(p!=='.'){
+   const span=document.createElement('span');span.textContent=GLYPHS[p];span.className='piece '+(white?'white':'black');btn.append(span);
+   const mark=document.createElement('span');mark.textContent=white?'Б':'Ч';mark.className='team '+(white?'white':'black');btn.append(mark);
+  }
+  if(file===0){const co=document.createElement('span');co.className='coord';co.textContent=8-rank;btn.append(co);}
+  if(rank===7){const co=document.createElement('span');co.className='coord file';co.textContent='abcdefgh'[file];btn.append(co);}
+  btn.setAttribute('aria-label',`${p==='.'?'Пустая клетка':(white?'Белая ':'Чёрная ')+PIECES[p.toLowerCase()]} ${sqName(i)}`);
+  btn.addEventListener('click',()=>choose(i));frag.append(btn);
  }
- $('board').replaceChildren(frag);$('turnDisc').style.background=s.t===1?'#fff':'#18333f';$('turnLabel').textContent=s.t===1?'Ход белых':'Ход чёрных';
+ $('board').replaceChildren(frag);$('turnDisc').style.background=s.t===1?'#fff':'#18333f';
+ $('turnLabel').textContent=s.t===1?'Ход белых':'Ход чёрных';buttonStatus();
 }
-function music(){try{const audio=lastSound||new(window.AudioContext||window.webkitAudioContext)();lastSound=audio;[470,670,930].forEach((hz,i)=>{const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=hz;g.gain.setValueAtTime(.035,audio.currentTime+i*.12);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+i*.12+.2);o.connect(g).connect(audio.destination);o.start(audio.currentTime+i*.12);o.stop(audio.currentTime+i*.12+.2);});}catch{}}
-function successFX(s){
- const fx=$('effects');fx.replaceChildren();fx.className='fx '+(s==='draw'?'draw':'show');
- if(s==='draw')fx.classList.add('show');
- else if(state.attempt){const position=parseFen(state.attempt.position),king=position.b.indexOf(position.t===-1?'k':'K');const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 800 800');let count=0;
-  for(let i=0;i<128;i++){if((i&0x88)||side(position.b[i])!==-position.t||count>=3)continue;const opponent=position.b[i];if(opponent==='.')continue;const line=document.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('x1',(i&7)*100+50);line.setAttribute('y1',(i>>4)*100+50);line.setAttribute('x2',(king&7)*100+50);line.setAttribute('y2',(king>>4)*100+50);svg.append(line);count++;}
-  fx.append(svg);}
- setTimeout(()=>{fx.className='fx';fx.replaceChildren();},1600);music();
+function resetFx(){clearTimeout(fxTimer);const fx=$('effects');fx.replaceChildren();fx.className='fx';$('boardWrap').classList.remove('bad-move');}
+function svgEl(name,attrs={}){const e=document.createElementNS('http://www.w3.org/2000/svg',name);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,String(v));return e;}
+function successFX(category,displayPoints){
+ resetFx();if(!prefs.effects||prefersReduce?.matches)return;
+ const fx=$('effects');fx.classList.add('celebrate');
+ const s=parseFen(state.attempt.position),king=s.b.indexOf(s.t===1?'K':'k');
+ if(category!=='draw'&&king>=0){
+  const attackers=attackersToKing(s).slice(0,5),svg=svgEl('svg',{viewBox:'0 0 800 800',preserveAspectRatio:'none'});
+  attackers.forEach((from,i)=>{
+   const beam=svgEl('line',{x1:(from&7)*100+50,y1:(from>>4)*100+50,x2:(king&7)*100+50,y2:(king>>4)*100+50});
+   beam.style.animationDelay=`${i*.12}s`;svg.append(beam);
+  });
+  if(attackers.length){const ring=document.createElement('span');ring.className='king-ring';ring.style.left=`${((king&7)+.5)*12.5}%`;ring.style.top=`${((king>>4)+.5)*12.5}%`;fx.append(ring);}fx.append(svg);
+ }
+ const title=document.createElement('div');title.className='victory-banner';
+ const big=document.createElement('strong');big.textContent=category==='draw'?'НИЧЬЯ СПАСЕНА!':'ШАХ И МАТ!';
+ const small=document.createElement('small');small.textContent=`+${displayPoints} ★ · ${category==='draw'?'Отличная защита!':encouragement[fxSequence++%encouragement.length]}`;
+ title.append(big,small);fx.append(title);
+ for(let i=0;i<18;i++){
+  const dot=document.createElement('span');dot.className='spark';dot.style.left=`${7+Math.random()*86}%`;dot.style.top=`${5+Math.random()*75}%`;
+  dot.style.setProperty('--dx',`${Math.round((Math.random()-.5)*130)}px`);dot.style.setProperty('--dy',`${Math.round(35+Math.random()*95)}px`);
+  dot.style.setProperty('--delay',`${Math.random()*.32}s`);dot.style.background=['#ffcd5b','#7ed9df','#ff89a7','#aab0ff'][i%4];fx.append(dot);
+ }
+ fxTimer=setTimeout(resetFx,2100);
+}
+function wrongMoveFX(){if(prefs.effects&&!prefersReduce?.matches){$('boardWrap').classList.remove('bad-move');void $('boardWrap').offsetWidth;$('boardWrap').classList.add('bad-move');setTimeout(()=>$('boardWrap').classList.remove('bad-move'),450);}sound('error');haptic('error');}
+function victoryText(result){
+ if(!result.firstSolve)return 'Задача пройдена! Повторные баллы не начисляются.';
+ return `${result.category==='draw'?'Отличная защита!':'Мат найден!'} +${result.points} ★${result.points===0?' (подсказка или ошибки)':''}`;
 }
 async function choose(i){
  if(!state.attempt||state.busy||state.attempt.status!=='active')return;
@@ -40,41 +97,102 @@ async function choose(i){
  if(side(s.b[i])===s.t){state.selected=state.selected===i?-1:i;board();return;}
  const candidates=moves.filter(m=>m[0]===state.selected&&m[1]===i);
  if(!candidates.length){state.selected=-1;board();return;}
- let m=candidates[0];if(candidates.length>1){const opt=window.prompt('Превращение пешки: q ферзь, r ладья, b слон, n конь','q');m=candidates.find(m=>m[2]===(opt||'q').toLowerCase());if(!m)return;}
- state.busy=true;
- try{const result=await api(`/api/attempts/${state.attempt.id}/move`,{method:'POST',body:JSON.stringify({uci:key(m)})});state.selected=-1;
-  if(!result.correct){notice(result.message,'error');return;}
+ let m=candidates[0];
+ if(candidates.length>1){const choice=window.prompt('Превращение: q — ферзь, r — ладья, b — слон, n — конь','q');
+  if(choice===null)return;m=candidates.find(move=>move[2]===choice.trim().toLowerCase());if(!m){toast('Выбери q, r, b или n');return;}}
+ const from=m[0],to=m[1],attemptId=state.attempt.id;state.busy=true;buttonStatus();
+ try{
+  const result=await api(`/api/attempts/${attemptId}/move`,{method:'POST',body:JSON.stringify({uci:key(m)})});
+  if(state.attempt?.id!==attemptId)return;
+  state.selected=-1;
+  if(!result.correct){state.attempt.errors=result.errors;notice(result.message+' Попробуй другой план.','error');wrongMoveFX();return;}
   state.attempt.position=result.position;state.attempt.status=result.completed?'solved':'active';
-  if(result.completed){notice(`Отлично! ${result.category==='draw'?'Ничья':'Шах и мат'}! +${result.points} очков.`,'success');successFX(result.category);await refreshMe();}
-  else notice(`Верно! ${result.defense?'Соперник ответил '+result.defense+'. Твой ход!':'Продолжай комбинацию!'}`,'');
- }catch(e){notice(e.message,'error')}finally{state.busy=false;board();}
+  state.lastMove=result.defense?[result.defense.slice(0,2),result.defense.slice(2,4)].map(sq=>{const f='abcdefgh'.indexOf(sq[0]),r=8-Number(sq[1]);return r*16+f;}):[from,to];
+  if(result.completed){
+   notice(victoryText(result),'success');board();successFX(result.category,result.points);sound('success');haptic('success');
+   const oldBadges=new Set(state.me?.game?.badges.filter(b=>b.earned).map(b=>b.id)||[]);
+   try{await refreshMe();const newly=state.me.game.badges.filter(b=>b.earned&&!oldBadges.has(b.id));
+    if(newly.length)toast(`Новая награда: ${newly.map(b=>b.title).join(', ')}!`);
+    else if(state.me.game.streak>=3)toast(`⚡ Серия: ${state.me.game.streak} безошибочных решений!`);
+   }catch{toast('Задача решена. Не удалось обновить профиль.');}
+  }else{notice(`Хорошо! ${result.defense?'Соперник ответил '+result.defense+'. Твой ход!':'Продолжай комбинацию!'}`);sound('step');}
+ }catch(e){notice(e.message,'error');}finally{state.busy=false;board();}
 }
-async function refreshMe(){const me=await api('/api/me');state.me=me;$('points').textContent=me.points;$('solved').textContent=me.solved;$('skill').textContent=me.skillRating;$('status').textContent=me.displayName||'Заполни профиль';$('name').value=me.displayName;$('publicRank').checked=me.leaderboardOptIn;}
+function displayBadges(){
+ const badges=state.me?.game?.badges||[],container=$('medals');container.replaceChildren();
+ for(const badge of badges){
+  const item=document.createElement('div');item.className='medal '+(badge.earned?'earned':'locked');
+  const symbol=document.createElement('span');symbol.className='medal-symbol';symbol.textContent=badge.earned?badge.icon:'🔒';
+  const info=document.createElement('div');const head=document.createElement('strong');head.textContent=badge.title;
+  const detail=document.createElement('small');detail.textContent=badge.description;
+  const meter=document.createElement('span');meter.className='medal-count';meter.textContent=badge.earned?'Получено':`${badge.progress}/${badge.target}`;
+  info.append(head,detail);item.append(symbol,info,meter);container.append(item);
+ }
+ $('badgeCount').textContent=badges.filter(b=>b.earned).length;
+}
+async function refreshMe(){
+ const me=await api('/api/me');state.me=me;
+ $('points').textContent=me.points;$('solved').textContent=me.solved;$('skill').textContent=me.skillRating;
+ $('status').textContent=me.displayName||'Заполни профиль';$('name').value=me.displayName;
+ $('publicRank').checked=me.leaderboardOptIn;
+ $('streak').textContent=me.game.streak;
+ const p=me.game.progress;$('levelName').textContent=`Уровень ${me.game.level} · ${me.game.levelName}`;
+ $('levelCount').textContent=p.target?`${p.current}/${p.target}`:'Максимальный уровень';
+ const pct=p.target?Math.round(p.current/p.target*100):100;
+ $('levelFill').style.width=`${pct}%`;
+ $('levelBar').setAttribute('aria-valuemax',String(p.target||1));$('levelBar').setAttribute('aria-valuenow',String(p.target?p.current:1));
+ displayBadges();
+}
 async function newPuzzle(){
- state.selected=-1;state.hint=null;$('hintMessage').hidden=true;$('effects').className='fx';
- $('challenge').textContent=labels[state.mode];
- try{const params=state.mode==='progressive'?{mode:'progressive'}:{mode:'category',category:state.mode};
-  const a=await api('/api/attempts',{method:'POST',body:JSON.stringify(params)});state.attempt=a;state.busy=false;
-  $('title').textContent=labels[a.category];$('description').textContent=a.category==='draw'?'Защитись и спаси ничью.':(a.source==='lichess'?'Реальная позиция из партии Lichess. Найди сильнейшие ходы.':'Учебная позиция из прежнего тренажёра. Найди мат.');$('difficulty').textContent=a.rating;$('reward').textContent='★ '+({mate1:1,mate2:2,mate3:3,draw:3}[a.category]||0);
-  notice('Твой ход. Выбери фигуру и подходящую клетку.');board();
- }catch(e){state.attempt=null;board();notice(e.message,'error');$('title').textContent='Нужны новые задачи';$('description').textContent='Добавь шахматную базу на сервер. Уровни будут открываться по мере тренировок.';}
+ if(state.busy)return;state.busy=true;state.selected=-1;state.lastMove=[];state.hints=0;
+ $('hintMessage').hidden=true;resetFx();$('challenge').textContent=labels[state.mode];buttonStatus();
+ try{
+  const params=state.mode==='progressive'?{mode:'progressive'}:{mode:'category',category:state.mode};
+  const a=await api('/api/attempts',{method:'POST',body:JSON.stringify(params)});state.attempt=a;
+  $('title').textContent=labels[a.category];$('description').textContent=a.category==='draw'?'В этой позиции нужно добиться настоящей ничьей. Найди точную защиту.':
+   a.source==='lichess'?'Реальная позиция из партии. Найди сильнейшую комбинацию.':'Учебная позиция. Найди мат и рассчитай ответ соперника.';
+  $('difficulty').textContent=a.rating;$('reward').textContent='★ '+(points[a.category]||0);
+  notice('Твой ход! Выбери свою фигуру — увидишь доступные клетки.');
+ }catch(e){state.attempt=null;notice(e.message,'error');$('title').textContent='Задачи пока не загружены';
+  $('description').textContent='Эта категория откроется после наполнения проверенными шахматными позициями.';
+ }finally{state.busy=false;board();}
 }
-async function hint(){if(!state.attempt||state.busy)return;try{const data=await api(`/api/attempts/${state.attempt.id}/hint`,{method:'POST',body:'{}'});const h=data.hint;$('hintMessage').hidden=false;$('hintMessage').textContent=h.kind==='piece'?`Начни с фигуры на ${h.square}.`:`Попробуй ${h.from} → ${h.to}.`;toast('Подсказка снижает награду на 1 балл');}catch(e){toast(e.message)}}
-async function changeMode(mode){if(mode==='leaderboard'){await openRanking();return;}state.mode=mode;for(const el of document.querySelectorAll('.tab'))el.classList.toggle('selected',el.dataset.mode===mode);await newPuzzle();}
-async function openRanking(){try{const result=await api('/api/leaderboard');$('rankings').replaceChildren(...result.users.map((u,i)=>{const row=document.createElement('div');row.className='rank-row';const name=document.createElement('span');name.textContent=`${i+1}. ${u.name}`;const score=document.createElement('b');score.textContent=`★ ${u.points}`;row.append(name,score);return row;}));if(!result.users.length)$('rankings').textContent='Пока никого нет. Можно первым вступить в рейтинг через профиль.';$('leaderboard').showModal();}catch(e){toast(e.message)}}
+async function hint(){
+ if(!state.attempt||state.busy||state.attempt.status!=='active')return;
+ state.busy=true;buttonStatus();
+ try{const data=await api(`/api/attempts/${state.attempt.id}/hint`,{method:'POST',body:'{}'}),h=data.hint;
+  $('hintMessage').hidden=false;$('hintMessage').textContent=h.kind==='piece'?`Посмотри на фигуру ${h.square}.`:`Попробуй ${h.from} → ${h.to}.`;
+  $('reward').textContent='★ '+Math.max(0,(points[state.attempt.category]||0)-1);toast('Подсказка уменьшает награду на один балл');
+ }catch(e){toast(e.message);}finally{state.busy=false;buttonStatus();}
+}
+async function changeMode(mode){if(state.busy)return;if(mode==='leaderboard'){await openRanking();return;}
+ state.mode=mode;for(const el of document.querySelectorAll('.tab'))el.classList.toggle('selected',el.dataset.mode===mode);await newPuzzle();
+}
+async function openRanking(){
+ try{const result=await api('/api/leaderboard');$('rankings').replaceChildren(...result.users.map((u,i)=>{
+  const row=document.createElement('div');row.className='rank-row';const name=document.createElement('span');name.textContent=`${i+1}. ${u.name}`;
+  const score=document.createElement('b');score.textContent=`★ ${u.points}`;row.append(name,score);return row;
+ }));if(!result.users.length)$('rankings').textContent='Пока никого нет. В профиле можно включить участие в рейтинге.';
+ $('leaderboard').showModal();}catch(e){toast(e.message);}
+}
 async function begin(){
  try{const config=await api('/api/config');
-  if(!state.token){if(tg?.initData){const login=await api('/api/auth/telegram',{method:'POST',body:JSON.stringify({initData:tg.initData})});state.token=login.token;sessionStorage.setItem('chess_session',state.token);}
-   else {if(config.demo)$('devLogin').hidden=false;$('auth').showModal();return;}}
-  await refreshMe();if(!state.me.displayName){$('profile').showModal();return;}
-  await newPuzzle();
+  if(!state.token){if(tg?.initData){const login=await api('/api/auth/telegram',{method:'POST',body:JSON.stringify({initData:tg.initData})});
+   state.token=login.token;sessionStorage.setItem('chess_session',state.token);
+  }else{if(config.demo)$('devLogin').hidden=false;$('auth').showModal();return;}}
+  await refreshMe();if(!state.me.displayName){$('profile').showModal();return;}await newPuzzle();
  }catch(e){sessionStorage.removeItem('chess_session');state.token='';$('authError').textContent=e.message;$('auth').showModal();}
 }
-$('devEnter').addEventListener('click',async()=>{try{const login=await api('/api/auth/dev',{method:'POST',body:JSON.stringify({name:$('devName').value})});state.token=login.token;sessionStorage.setItem('chess_session',state.token);$('auth').close();await refreshMe();await newPuzzle();}catch(e){$('authError').textContent=e.message;}});
-$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,leaderboardOptIn:$('publicRank').checked})});$('profile').close();await refreshMe();if(!state.attempt)await newPuzzle();}catch(e){$('profileError').textContent=e.message;}});
-$('profileButton').addEventListener('click',()=>{if(!state.me)return;$('profile').showModal();});
-$('hint').addEventListener('click',hint);
-$('skip').addEventListener('click',()=>{if(!state.attempt)return;newPuzzle();});
-$('next').addEventListener('click',newPuzzle);
+$('devEnter').addEventListener('click',async()=>{try{const login=await api('/api/auth/dev',{method:'POST',body:JSON.stringify({name:$('devName').value})});
+ state.token=login.token;sessionStorage.setItem('chess_session',state.token);$('auth').close();await refreshMe();await newPuzzle();
+ }catch(e){$('authError').textContent=e.message;}});
+$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,leaderboardOptIn:$('publicRank').checked})});
+ $('profile').close();await refreshMe();if(!state.attempt)await newPuzzle();}catch(e){$('profileError').textContent=e.message;}});
+$('profileButton').addEventListener('click',()=>{if(state.me)$('profile').showModal();});
+const openMedals=()=>{if(state.me){displayBadges();$('achievements').showModal();}};
+$('achievementsButton').addEventListener('click',openMedals);$('badgesLink').addEventListener('click',openMedals);
+$('soundButton').addEventListener('click',()=>{setPreference('sound',!prefs.sound);if(prefs.sound)sound('success');});
+$('effectsButton').addEventListener('click',()=>{setPreference('effects',!prefs.effects);if(!prefs.effects)resetFx();});
+$('hint').addEventListener('click',hint);$('skip').addEventListener('click',newPuzzle);$('next').addEventListener('click',newPuzzle);
 for(const b of document.querySelectorAll('.tab'))b.addEventListener('click',()=>changeMode(b.dataset.mode));
-begin();
+renderPreferences();buttonStatus();void begin();

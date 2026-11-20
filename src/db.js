@@ -40,6 +40,10 @@ export function openDb(file = process.env.DB_PATH || './storage/chess.sqlite') {
     );
     CREATE INDEX IF NOT EXISTS idx_completions_recent ON completions(solved_at);
   `);
+  // Additive migration for databases created by v0.1; existing users and scores stay intact.
+  const cols=new Set(db.prepare('PRAGMA table_info(users)').all().map(c=>c.name));
+  if(!cols.has('clean_streak')) db.exec('ALTER TABLE users ADD COLUMN clean_streak INTEGER NOT NULL DEFAULT 0');
+  if(!cols.has('best_streak')) db.exec('ALTER TABLE users ADD COLUMN best_streak INTEGER NOT NULL DEFAULT 0');
   return db;
 }
 

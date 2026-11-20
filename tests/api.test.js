@@ -26,7 +26,11 @@ test('full HTTP journey: login, profile, random task, score and private leaderbo
   assert.ok(chosen);
   const done=await call(`/api/attempts/${attempt.data.id}/move`,'POST',{uci:chosen.line[0]});
   assert.equal(done.status,200);assert.equal(done.data.completed,true);assert.equal(done.data.points,1);
-  assert.equal((await call('/api/me')).data.points,1);
+  const afterSolve=(await call('/api/me')).data;
+  assert.equal(afterSolve.points,1);
+  assert.equal(afterSolve.game.streak,1);
+  assert.equal(afterSolve.game.bestStreak,1);
+  assert.ok(afterSolve.game.badges.find(b=>b.id==='first'&&b.earned));
   assert.deepEqual((await call('/api/leaderboard')).data.users,[]);
   const optIn=await call('/api/me','PATCH',{leaderboardOptIn:true});assert.equal(optIn.data.leaderboardOptIn,true);
   assert.equal((await call('/api/leaderboard')).data.users[0].name,'Лёша');
@@ -35,5 +39,6 @@ test('full HTTP journey: login, profile, random task, score and private leaderbo
   assert.notEqual(second.data.position,attempt.data.position);
   const content=await fetch(base+'/');assert.equal(content.status,200);assert.match(await content.text(),/Шахматная академия/);
   const js=await fetch(base+'/chess.js');assert.equal(js.status,200);assert.match(await js.text(),/export \{/);
+  const fun=await fetch(base+'/fun.js');assert.equal(fun.status,200);assert.match(await fun.text(),/attackersToKing/);
  } finally{await new Promise(ok=>server.close(ok));db.close();}
 });

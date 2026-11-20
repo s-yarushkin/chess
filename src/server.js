@@ -6,6 +6,7 @@ import {randomUUID,timingSafeEqual,createHash} from 'node:crypto';
 import {openDb} from './db.js';
 import {validateInitData,loginTelegram,makeSession,findSession,validName,publicUser} from './auth.js';
 import {puzzleCounts,startAttempt,publicAttempt,submitMove,hint} from './puzzles.js';
+import {progressSnapshot} from './gamification.js';
 
 const staticDir=resolve(dirname(fileURLToPath(import.meta.url)),'../public');
 const mimetypes={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
@@ -60,19 +61,20 @@ export function makeHandler(db,{dev=process.env.DEV_MODE==='1'}={}){
         return success(res,{token:makeSession(db,u.id),user:publicUser(db.prepare('SELECT * FROM users WHERE id=?').get(u.id))});
       }
       if(path==='/api/catalog'&&method==='GET')return success(res,{counts:puzzleCounts(db),scoring:{mate1:1,mate2:2,mate3:3,draw:3}});
-      if(method==='GET' && ['/', '/app.js','/style.css','/chess.js'].includes(path)){
+      if(method==='GET' && ['/', '/app.js','/fun.js','/style.css','/chess.js'].includes(path)){
         const file=path==='/'?'index.html':path==='/chess.js'?'../src/chess.js':path.slice(1);
         const bytes=await readFile(join(staticDir,file));res.writeHead(200,{'Content-Type':mimetypes[extname(file)]||'application/octet-stream','Cache-Control':'no-store'});return res.end(bytes);
       }
       const token=(req.headers.authorization||'').replace(/^Bearer /,'');
       const user=findSession(db,token);
       if(!user)return failure(res,401,'Необходимо войти');
-      if(path==='/api/me'&&method==='GET')return success(res,publicUser(user));
+      if(path==='/api/me'&&method==='GET')return success(res,{...publicUser(user),game:progressSnapshot(db,user)});
       if(path==='/api/me'&&method==='PATCH'){
         const obj=await body(req);
         if(obj.displayName!==undefined){if(!validName(obj.displayName))return failure(res,400,'Имя от 2 до 30 символов');db.prepare('UPDATE users SET display_name=? WHERE id=?').run(obj.displayName.trim(),user.id);}
         if(obj.leaderboardOptIn!==undefined){if(typeof obj.leaderboardOptIn!=='boolean')return failure(res,400,'leaderboardOptIn must be boolean');db.prepare('UPDATE users SET leaderboard_opt_in=? WHERE id=?').run(Number(obj.leaderboardOptIn),user.id);}
-        return success(res,publicUser(db.prepare('SELECT * FROM users WHERE id=?').get(user.id)));
+        const updated=db.prepare('SELECT * FROM users WHERE id=?').get(user.id);
+        return success(res,{...publicUser(updated),game:progressSnapshot(db,updated)});
       }
       if(path==='/api/leaderboard'&&method==='GET'){
         const requested=Number(url.searchParams.get('limit')||20);
