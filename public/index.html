@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#102d39"><meta name="description" content="Шахматная академия: задачи из реальных партий, прогресс, очки и друзья">
+<title>Шахматная академия</title><link rel="stylesheet" href="/style.css">
+<script src="https://telegram.org/js/telegram-web-app.js" defer></script>
+<script type="module" src="/app.js" defer></script>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand"><span class="brand-icon">♞</span><div><strong>ШАХМАТНАЯ АКАДЕМИЯ</strong><small id="headline">Тренируйся. Побеждай. Расти.</small></div></div>
+    <div class="score" title="Очки и решённые задачи"><span>★ <b id="points">0</b></span><small><b id="solved">0</b> решено</small></div>
+    <button class="icon-btn" id="profileButton" aria-label="Профиль">☻</button>
+  </header>
+  <nav class="tabs" aria-label="Режим игры">
+    <button class="tab selected" data-mode="progressive">🚀 По порядку</button>
+    <button class="tab" data-mode="mate1">♟ Мат в 1</button>
+    <button class="tab" data-mode="mate2">♜ Мат в 2</button>
+    <button class="tab" data-mode="mate3">♛ Мат в 3</button>
+    <button class="tab" data-mode="draw">🤝 Спаси ничью</button>
+    <button class="tab" data-mode="leaderboard">🏆 Рейтинг</button>
+  </nav>
+  <main class="game-layout">
+    <section class="board-panel" aria-label="Игровое поле">
+      <div class="board-header"><div class="turn"><span class="turn-disc" id="turnDisc"></span><strong id="turnLabel">Ход белых</strong></div><span class="challenge" id="challenge">Прогрессивный режим</span></div>
+      <div class="board-wrap" id="boardWrap"><div id="board" class="board" role="grid" aria-label="Шахматная доска"></div><div class="fx" id="effects" aria-hidden="true"></div></div>
+      <div class="game-buttons"><button id="hint" class="button soft">✦ Подсказка</button><button id="skip" class="button outline">Пропустить</button><button id="next" class="button primary">Следующая →</button></div>
+    </section>
+    <aside class="info-panel">
+      <div class="eyebrow">Шахматная школа · твой прогресс</div>
+      <h1 id="title">Шахматная академия</h1>
+      <p id="description">Найди сильнейший ход и доведи комбинацию до конца. Фигуры всегда подписаны цветом.</p>
+      <div id="notice" class="notice">Выбери фигуру и нажми на клетку, куда хочешь её поставить.</div>
+      <div id="hintMessage" class="hint-message" hidden></div>
+      <div class="stats"><div><small>Сложность</small><b id="difficulty">—</b></div><div><small>Награда</small><b id="reward">★ —</b></div><div><small>Рейтинг игрока</small><b id="skill">800</b></div></div>
+      <div class="foot"><span>Прогресс сохраняется на сервере</span><span id="status">Не авторизован</span></div>
+    </aside>
+  </main>
+  <dialog id="profile" class="dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>Мой профиль</h2><label for="name">Имя или никнейм</label><input type="text" id="name" maxlength="30" minlength="2" autocomplete="nickname" placeholder="Например, Лёша" required><label class="check"><input id="publicRank" type="checkbox"> Показывать мой ник в общем рейтинге</label><small>Участие добровольное. Настоящее имя указывать не обязательно.</small><button type="button" class="button primary" id="saveProfile">Сохранить</button><p id="profileError"></p></form></dialog>
+  <dialog id="auth" class="dialog"><div><h2>Добро пожаловать!</h2><p>Открой игру через Telegram. При первом входе выбери своё имя или никнейм.</p><div id="devLogin" hidden><label for="devName">Локальный тестовый вход</label><input id="devName" placeholder="Имя тестового игрока" minlength="2" maxlength="30"><button class="button primary" id="devEnter">Войти (только локально)</button></div><p id="authError"></p></div></dialog>
+  <dialog id="leaderboard" class="dialog"><form method="dialog"><button class="close">×</button><h2>Рейтинг игроков</h2><p>В рейтинге только те, кто захотел участвовать. Имена — выбранные никнеймы.</p><div class="ranking" id="rankings"></div></form></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
+</body></html>

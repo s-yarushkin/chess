@@ -1,0 +1,1062 @@
+[
+  {
+    "id": "legacy-easy-1",
+    "fen": "5k2/2R5/8/1RK5/8/8/8/8 w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "b5b8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Король в углу"
+  },
+  {
+    "id": "legacy-easy-2",
+    "fen": "8/8/8/8/8/8/5K1k/3Q4 w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "d1h5"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ферзь на охоте"
+  },
+  {
+    "id": "legacy-easy-3",
+    "fen": "8/1K6/8/1R6/8/k7/8/3R4 w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "d1a1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Башня и башня"
+  },
+  {
+    "id": "legacy-easy-4",
+    "fen": "8/8/3K3R/8/8/8/6R1/4k3 w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "h6h1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Закрытый выход"
+  },
+  {
+    "id": "legacy-easy-5",
+    "fen": "8/8/8/7k/8/6R1/4K3/4R3 w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "e1h1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ладьи на страже"
+  },
+  {
+    "id": "legacy-easy-6",
+    "fen": "3K3k/2R5/8/4R3/8/8/8/8 w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "e5e8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Последняя горизонталь"
+  },
+  {
+    "id": "legacy-easy-7",
+    "fen": "8/8/8/8/8/5KQ1/8/7k w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "g3g2"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Шахматный луч"
+  },
+  {
+    "id": "legacy-easy-8",
+    "fen": "8/8/5R2/8/8/4K3/2R5/4k3 w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "c2c1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Две ладьи — команда"
+  },
+  {
+    "id": "legacy-easy-9",
+    "fen": "8/8/8/8/8/3K4/5Q2/2k5 w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "f2c2"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Точный выстрел"
+  },
+  {
+    "id": "legacy-easy-10",
+    "fen": "8/8/8/6R1/8/3K1R2/8/7k w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "f3h3"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Победный ход"
+  },
+  {
+    "id": "legacy-easy-11",
+    "fen": "7k/4R3/3R4/8/8/3K4/8/8 w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "d6d8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Две ладьи встречают короля"
+  },
+  {
+    "id": "legacy-easy-12",
+    "fen": "2k5/8/1K6/8/8/8/1Q6/3R4 w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "b2h8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Сюрприз на диагонали"
+  },
+  {
+    "id": "legacy-easy-13",
+    "fen": "8/3R4/6Q1/8/7k/8/8/2K5 w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "d7h7"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Поддержка седьмой линии"
+  },
+  {
+    "id": "legacy-easy-14",
+    "fen": "6R1/8/R7/8/8/4K3/8/7k w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "a6h6"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Длинная ладейная атака"
+  },
+  {
+    "id": "legacy-easy-15",
+    "fen": "8/8/2R5/8/1R6/5K2/k7/8 w - - 0 1",
+    "category": "mate1",
+    "rating": 1000,
+    "line": [
+      "c6a6"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ладьи закрывают ловушку"
+  },
+  {
+    "id": "legacy-hard-1",
+    "fen": "8/8/8/8/6N1/5p2/1Q6/K4k2 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "b2f2"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Куда убежит король?"
+  },
+  {
+    "id": "legacy-hard-2",
+    "fen": "8/p7/8/8/4N3/8/Q7/1K1k4 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "a2d2"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ферзь и конь"
+  },
+  {
+    "id": "legacy-hard-3",
+    "fen": "1k6/6Q1/3N4/1p6/8/3K4/8/8 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "g7b7"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ловушка для короля"
+  },
+  {
+    "id": "legacy-hard-4",
+    "fen": "8/8/1Q6/8/8/4p1K1/8/6k1 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "b6b1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Найди тихий путь"
+  },
+  {
+    "id": "legacy-hard-5",
+    "fen": "6Q1/7N/8/7k/5p2/8/4K3/8 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "g8g5"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "На краю доски"
+  },
+  {
+    "id": "legacy-hard-6",
+    "fen": "8/8/1p6/8/8/R2K4/3R4/5k2 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "a3a1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Сила двух ладей"
+  },
+  {
+    "id": "legacy-hard-7",
+    "fen": "4KR2/8/7k/8/8/8/8/6Q1 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "f8h8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Король под защитой"
+  },
+  {
+    "id": "legacy-hard-8",
+    "fen": "8/4R3/8/4p3/k7/2K5/1R6/8 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "e7a7"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Победа по вертикали"
+  },
+  {
+    "id": "legacy-hard-9",
+    "fen": "8/p7/8/5Q2/8/1K6/2p5/2k5 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "f5c2"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Пешки мешают"
+  },
+  {
+    "id": "legacy-hard-10",
+    "fen": "4K3/6Q1/8/8/7k/8/8/4R3 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "e1h1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Последняя клетка"
+  },
+  {
+    "id": "legacy-hard-11",
+    "fen": "1R6/6p1/8/8/8/5K1k/1R6/8 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "b8h8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Всадник за спиной"
+  },
+  {
+    "id": "legacy-hard-12",
+    "fen": "8/8/8/8/3K4/6R1/7k/4Q3 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "e1g1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Тонкий ход ферзя"
+  },
+  {
+    "id": "legacy-hard-13",
+    "fen": "k7/3B4/1Q6/8/8/4K3/8/8 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "d7c6"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Слон закрывает дорогу"
+  },
+  {
+    "id": "legacy-hard-14",
+    "fen": "7k/5K2/3Np3/8/8/8/8/4R3 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "e1h1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Конь держит проход"
+  },
+  {
+    "id": "legacy-hard-15",
+    "fen": "5K1k/R7/8/8/3p4/R7/8/8 w - - 0 1",
+    "category": "mate1",
+    "rating": 1450,
+    "line": [
+      "a3h3"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Пешка отвлекает защиту"
+  },
+  {
+    "id": "legacy-two-1",
+    "fen": "6K1/3Q4/8/7k/7B/8/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "h4d8",
+      "h5g6",
+      "d7h7"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Слон готовит ловушку"
+  },
+  {
+    "id": "legacy-two-2",
+    "fen": "8/7k/8/5K2/8/8/6Q1/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f5f6",
+      "h7h8",
+      "g2g7"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Смелый король"
+  },
+  {
+    "id": "legacy-two-3",
+    "fen": "8/8/3Q4/7B/5K2/8/8/7k w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f4g3",
+      "h1g1",
+      "d6d1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Король — помощник"
+  },
+  {
+    "id": "legacy-two-4",
+    "fen": "7k/8/8/5K2/5Q2/8/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f5g6",
+      "h8g8",
+      "f4b8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Встреча у края"
+  },
+  {
+    "id": "legacy-two-5",
+    "fen": "8/8/8/1Q6/1K6/8/k7/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "b4c3",
+      "a2a3",
+      "b5a6"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ключ к уголку"
+  },
+  {
+    "id": "legacy-two-6",
+    "fen": "8/7k/8/2R2K2/8/4R3/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "c5c7",
+      "h7g8",
+      "e3e8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ладья перекрывает путь"
+  },
+  {
+    "id": "legacy-two-7",
+    "fen": "3k3B/Q7/8/2K5/8/8/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "c5d6",
+      "d8c8",
+      "a7a8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Один шаг навстречу"
+  },
+  {
+    "id": "legacy-two-8",
+    "fen": "8/8/8/8/8/8/3K1Q2/1k6 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "d2c3",
+      "b1a1",
+      "f2b2"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Поймай короля"
+  },
+  {
+    "id": "legacy-two-9",
+    "fen": "8/8/4K2R/8/8/7Q/8/2k5 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "h3g2",
+      "c1b1",
+      "h6h1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Секрет ферзя"
+  },
+  {
+    "id": "legacy-two-10",
+    "fen": "8/7K/8/8/5R2/8/7k/5Q2 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f1f2",
+      "h2h3",
+      "f4h4"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ферзь и ладья"
+  },
+  {
+    "id": "legacy-two-11",
+    "fen": "8/3R4/5R2/2K4k/8/8/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "d7g7",
+      "h5h4",
+      "f6h6"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Две башни"
+  },
+  {
+    "id": "legacy-two-12",
+    "fen": "8/8/8/3K4/3R4/5R2/8/6k1 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "d4d2",
+      "g1h1",
+      "f3f1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Первый ход — подготовка"
+  },
+  {
+    "id": "legacy-two-13",
+    "fen": "1k6/6K1/8/6R1/8/2R5/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "g5b5",
+      "b8a8",
+      "c3a3"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Перекрой линию"
+  },
+  {
+    "id": "legacy-two-14",
+    "fen": "8/8/8/5R2/k7/8/4K3/3R4 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "d1b1",
+      "a4a3",
+      "f5a5"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ладьи не отступают"
+  },
+  {
+    "id": "legacy-two-15",
+    "fen": "4B3/k7/8/8/2K2Q2/8/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f4c7",
+      "a7a8",
+      "e8c6"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ловушка по диагонали"
+  },
+  {
+    "id": "legacy-two-16",
+    "fen": "8/2K2Q2/8/8/2B4k/8/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f7f4",
+      "h4h5",
+      "c4f7"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Подготовь шах"
+  },
+  {
+    "id": "legacy-two-17",
+    "fen": "8/5B2/5Q2/8/8/k7/8/2K5 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f6c3",
+      "a3a4",
+      "f7e8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ферзь ищет выход"
+  },
+  {
+    "id": "legacy-two-18",
+    "fen": "8/7k/8/8/8/4B3/4KQ2/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f2f7",
+      "h7h8",
+      "e3d4"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Команда со слоном"
+  },
+  {
+    "id": "legacy-two-19",
+    "fen": "2k1K3/8/8/8/3R1Q2/8/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f4f7",
+      "c8b8",
+      "d4d8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Загоняем в угол"
+  },
+  {
+    "id": "legacy-two-20",
+    "fen": "8/8/8/7N/4K3/8/7k/5Q2 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f1f2",
+      "h2h3",
+      "f2g3"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Последний рубеж"
+  },
+  {
+    "id": "legacy-two-21",
+    "fen": "8/3Q4/8/4K3/5R2/8/8/2k5 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f4f2",
+      "c1b1",
+      "d7d1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Точный ход слона"
+  },
+  {
+    "id": "legacy-two-22",
+    "fen": "6k1/8/8/6K1/4R3/8/8/R7 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "g5g6",
+      "g8f8",
+      "a1a8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Сначала загнать, потом добить"
+  },
+  {
+    "id": "legacy-two-23",
+    "fen": "3k4/8/5K2/8/4Q3/4P3/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "e4b7",
+      "d8e8",
+      "b7c8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Играем королём"
+  },
+  {
+    "id": "legacy-two-24",
+    "fen": "8/k7/3K4/8/6Q1/6P1/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "d6c7",
+      "a7a8",
+      "g4a4"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Три фигуры — одна команда"
+  },
+  {
+    "id": "legacy-two-25",
+    "fen": "k7/8/3K4/8/8/5p1N/8/5R2 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "d6c7",
+      "a8a7",
+      "f1a1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Закрой поле бегства"
+  },
+  {
+    "id": "legacy-two-26",
+    "fen": "1k4K1/8/8/8/8/8/3Q4/5R2 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "d2d7",
+      "b8a8",
+      "f1f8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Незаметный ход"
+  },
+  {
+    "id": "legacy-two-27",
+    "fen": "8/8/3K4/8/2Q5/7k/4R3/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "c4g8",
+      "h3h4",
+      "e2h2"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Волшебный прыжок коня"
+  },
+  {
+    "id": "legacy-two-28",
+    "fen": "5NK1/4R3/8/8/7k/4R3/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "e7g7",
+      "h4h5",
+      "e3h3"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Куда отступит король?"
+  },
+  {
+    "id": "legacy-two-29",
+    "fen": "N7/5p1k/8/8/8/7K/1R4R1/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "b2b4",
+      "f7f6",
+      "b4h4"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Перекрой опасный путь"
+  },
+  {
+    "id": "legacy-two-30",
+    "fen": "8/R7/K2R4/8/8/8/k7/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "d6b6",
+      "a2a3",
+      "a6b7"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Тихая угроза"
+  },
+  {
+    "id": "legacy-two-31",
+    "fen": "4B3/8/6Q1/8/8/8/3K4/7k w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "e8c6",
+      "h1h2",
+      "g6g2"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Клетка под контролем"
+  },
+  {
+    "id": "legacy-two-32",
+    "fen": "8/8/2P5/8/7k/5K2/8/5Q2 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f1b5",
+      "h4h3",
+      "b5h5"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Точная расстановка"
+  },
+  {
+    "id": "legacy-two-33",
+    "fen": "5R2/2N2p2/2K5/4R3/8/k7/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "e5b5",
+      "f7f6",
+      "f8a8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Подготовка ферзя"
+  },
+  {
+    "id": "legacy-two-34",
+    "fen": "7B/8/8/8/3QK3/8/4p3/4k3 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "e4f3",
+      "e1f1",
+      "d4f2"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Секрет длинной диагонали"
+  },
+  {
+    "id": "legacy-two-35",
+    "fen": "1R2R3/4K3/8/3N4/1p6/8/k7/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "b8b4",
+      "a2a3",
+      "e8a8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Сильная горизонталь"
+  },
+  {
+    "id": "legacy-two-36",
+    "fen": "4k3/1Q6/8/1p3K2/8/8/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f5e6",
+      "e8d8",
+      "b7b8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Вынужденный ответ"
+  },
+  {
+    "id": "legacy-two-37",
+    "fen": "2B5/8/3K4/8/8/8/2Q5/6k1 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "c8h3",
+      "g1h1",
+      "c2g2"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Рядом с ловушкой"
+  },
+  {
+    "id": "legacy-two-38",
+    "fen": "3k4/5Q2/8/8/1K6/8/1B6/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "b2e5",
+      "d8c8",
+      "f7c7"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ферзь ищет подход"
+  },
+  {
+    "id": "legacy-two-39",
+    "fen": "6R1/8/8/k7/6R1/8/1K6/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "g8b8",
+      "a5a6",
+      "g4a4"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Два шага к победе"
+  },
+  {
+    "id": "legacy-two-40",
+    "fen": "8/8/KR5p/8/8/3R4/k7/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "d3d5",
+      "h6h5",
+      "d5a5"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Ладьи работают вместе"
+  },
+  {
+    "id": "legacy-two-41",
+    "fen": "8/1p6/5Q2/7k/2P5/4K3/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "e3f4",
+      "b7b6",
+      "f6g5"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Не спеши с шахом"
+  },
+  {
+    "id": "legacy-two-42",
+    "fen": "2K1k3/7R/5R2/8/8/8/7p/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f6d6",
+      "e8f8",
+      "d6d8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Сложная развязка"
+  },
+  {
+    "id": "legacy-two-43",
+    "fen": "2K5/4R3/8/8/k7/5R2/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "e7b7",
+      "a4a5",
+      "f3a3"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Найдётся ли защита?"
+  },
+  {
+    "id": "legacy-two-44",
+    "fen": "2N5/8/3Q4/8/6K1/8/8/6k1 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "g4g3",
+      "g1f1",
+      "d6d1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Головоломка с пешкой"
+  },
+  {
+    "id": "legacy-two-45",
+    "fen": "8/8/8/8/5K2/p7/Q7/2k5 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f4e3",
+      "c1d1",
+      "a2d2"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Неподвижный король"
+  },
+  {
+    "id": "legacy-two-46",
+    "fen": "3R4/8/7K/7R/8/8/8/2k5 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "h5h2",
+      "c1b1",
+      "d8d1"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Загоняем на последнюю линию"
+  },
+  {
+    "id": "legacy-two-47",
+    "fen": "8/k7/8/8/2K2Q2/8/5R2/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f4c7",
+      "a7a8",
+      "f2f8"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Коварный манёвр"
+  },
+  {
+    "id": "legacy-two-48",
+    "fen": "5K2/8/7k/4Q3/8/6B1/8/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "f8f7",
+      "h6h7",
+      "e5g7"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Защиты всё равно нет"
+  },
+  {
+    "id": "legacy-two-49",
+    "fen": "8/8/N7/8/7k/1R6/4R3/2K5 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "e2g2",
+      "h4h5",
+      "b3h3"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Выигрышная идея"
+  },
+  {
+    "id": "legacy-two-50",
+    "fen": "8/8/1R6/4K2k/8/8/3B4/8 w - - 0 1",
+    "category": "mate2",
+    "rating": 1700,
+    "line": [
+      "e5f4",
+      "h5h4",
+      "b6h6"
+    ],
+    "source": "legacy-demo",
+    "quality": "demo",
+    "title": "Последняя комбинация"
+  }
+]
