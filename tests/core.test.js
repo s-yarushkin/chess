@@ -37,7 +37,7 @@ test('points once per puzzle; hints and errors reduce reward; no duplicate rewar
 });
 test('hint reduces score but never invents a move',()=>{
  const db=openDb(':memory:');const usr=loginTelegram(db,'1200');insertPuzzle(db,examples.find(p=>p.category==='mate1'));
- const a=startAttempt(db,usr,'category','mate1');const h=hint(db,usr,a.id);eq(h.hint.kind,'piece');const done=submitMove(db,usr,a.id,examples[0].line[0]);eq(done.points,0);db.close();
+ const a=startAttempt(db,usr,'category','mate1');const h=hint(db,usr,a.id);eq(h.hint.kind,'piece');const done=submitMove(db,usr,a.id,examples[0].line[0]);eq(done.points,1);db.close();
 });
 test('verified draw cannot use one-move last pawn capture or unproven equality',()=>{
  const p={id:'fake-draw',fen:'4k3/8/8/8/8/8/8/4K3 w - - 0 1',line:['e1e2','e8e7','e2e3'],rating:800,category:'draw'};

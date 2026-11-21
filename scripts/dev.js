@@ -1,6 +1,4 @@
-// Local test server, reachable only from this computer.
-import {openDb} from '../src/db.js';
-import {makeServer} from '../src/server.js';
-const port=Number(process.env.PORT||8094);
-const db=openDb();
-makeServer(db,{dev:true}).listen(port,'127.0.0.1',()=>console.log(`Chess Academy local dev on http://127.0.0.1:${port}`));
+import {spawn} from 'node:child_process';
+const child=spawn(process.execPath,['src/server.js'],{env:{...process.env,DEV_MODE:'1'},stdio:'inherit'});
+for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>child.kill(signal));
+child.on('exit',code=>process.exit(code||0));

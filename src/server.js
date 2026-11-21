@@ -7,6 +7,8 @@ import {openDb} from './db.js';
 import {validateInitData,loginTelegram,makeSession,findSession,validName,publicUser} from './auth.js';
 import {puzzleCounts,startAttempt,publicAttempt,submitMove,hint} from './puzzles.js';
 import {progressSnapshot} from './gamification.js';
+import {schoolProgress} from './school.js';
+import {friendsSnapshot,createInvite,requestFriend,respondFriend,removeFriend} from './friends.js';
 
 const staticDir=resolve(dirname(fileURLToPath(import.meta.url)),'../public');
 const mimetypes={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
@@ -14,7 +16,7 @@ const success=(res,data,status=200)=>{res.writeHead(status,{'Content-Type':'appl
 function failure(res,code,message){success(res,{error:message},code);}
 const equals=(a,b)=>{const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y);};
 async function body(req){let data='';for await(const chunk of req){data+=chunk;if(data.length>12000)throw Error('Request too large');}try{return JSON.parse(data||'{}')}catch{throw Error('Invalid JSON');}}
-const featureConfig=()=>({demo:process.env.DEV_MODE==='1',botConfigured:!!process.env.TG_BOT_TOKEN,leaderboardOptIn:true});
+const featureConfig=()=>({demo:process.env.DEV_MODE==='1',botConfigured:!!process.env.TG_BOT_TOKEN,leaderboardOptIn:false,privateFriends:true});
 async function botRespond(chatId,text,opts){const token=process.env.TG_BOT_TOKEN;if(!token)return;const response=await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:chatId,text,...opts}),signal:AbortSignal.timeout(9000)});if(!response.ok)throw Error('Telegram API returned error');}
 async function handleTelegramWebhook(req,res){
   const expected=process.env.TG_WEBHOOK_SECRET||'';
@@ -60,7 +62,7 @@ export function makeHandler(db,{dev=process.env.DEV_MODE==='1'}={}){
         db.prepare('UPDATE users SET display_name=? WHERE id=?').run(obj.name.trim(),u.id);
         return success(res,{token:makeSession(db,u.id),user:publicUser(db.prepare('SELECT * FROM users WHERE id=?').get(u.id))});
       }
-      if(path==='/api/catalog'&&method==='GET')return success(res,{counts:puzzleCounts(db),scoring:{mate1:1,mate2:2,mate3:3,draw:3}});
+      if(path==='/api/catalog'&&method==='GET')return success(res,{counts:puzzleCounts(db),scoring:{mate1:1,mate2:2,mate3:3,draw:3},note:'Баллы только за новые задачи. Подсказка не лишает маленького шахматиста награды.'});
       if(method==='GET' && ['/', '/app.js','/fun.js','/style.css','/chess.js'].includes(path)){
         const file=path==='/'?'index.html':path==='/chess.js'?'../src/chess.js':path.slice(1);
         const bytes=await readFile(join(staticDir,file));res.writeHead(200,{'Content-Type':mimetypes[extname(file)]||'application/octet-stream','Cache-Control':'no-store'});return res.end(bytes);
@@ -68,20 +70,30 @@ export function makeHandler(db,{dev=process.env.DEV_MODE==='1'}={}){
       const token=(req.headers.authorization||'').replace(/^Bearer /,'');
       const user=findSession(db,token);
       if(!user)return failure(res,401,'Необходимо войти');
-      if(path==='/api/me'&&method==='GET')return success(res,{...publicUser(user),game:progressSnapshot(db,user)});
+      if(path==='/api/me'&&method==='GET')return success(res,{...publicUser(user),game:progressSnapshot(db,user),school:schoolProgress(db,user)});
       if(path==='/api/me'&&method==='PATCH'){
         const obj=await body(req);
         if(obj.displayName!==undefined){if(!validName(obj.displayName))return failure(res,400,'Имя от 2 до 30 символов');db.prepare('UPDATE users SET display_name=? WHERE id=?').run(obj.displayName.trim(),user.id);}
-        if(obj.leaderboardOptIn!==undefined){if(typeof obj.leaderboardOptIn!=='boolean')return failure(res,400,'leaderboardOptIn must be boolean');db.prepare('UPDATE users SET leaderboard_opt_in=? WHERE id=?').run(Number(obj.leaderboardOptIn),user.id);}
+        if(obj.leaderboardOptIn===true)return failure(res,400,'Public leaderboard is disabled for junior players');
+        if(obj.friendsOptIn!==undefined){
+          if(typeof obj.friendsOptIn!=='boolean')return failure(res,400,'friendsOptIn must be boolean');
+          db.prepare('UPDATE users SET friends_opt_in=? WHERE id=?').run(Number(obj.friendsOptIn),user.id);
+          if(!obj.friendsOptIn)db.prepare('UPDATE friend_invites SET used_at=? WHERE owner_id=? AND used_at IS NULL').run(Date.now(),user.id);
+        }
         const updated=db.prepare('SELECT * FROM users WHERE id=?').get(user.id);
-        return success(res,{...publicUser(updated),game:progressSnapshot(db,updated)});
+        return success(res,{...publicUser(updated),game:progressSnapshot(db,updated),school:schoolProgress(db,updated)});
       }
-      if(path==='/api/leaderboard'&&method==='GET'){
-        const requested=Number(url.searchParams.get('limit')||20);
-        const limit=Number.isInteger(requested)?Math.min(50,Math.max(1,requested)):20;
-        const users=db.prepare(`SELECT display_name AS name,points,solved_count AS solved,skill_rating AS skill FROM users WHERE leaderboard_opt_in=1 AND length(display_name)>=2 ORDER BY points DESC,solved_count DESC LIMIT ?`).all(limit);
-        return success(res,{users});
+      // For 8–9 year old players there is no global child discovery or public ranking.
+      if(path==='/api/leaderboard'&&method==='GET')return success(res,{users:[],private:true,note:'Используй закрытый круг друзей.'});
+      if(path==='/api/friends'&&method==='GET')return success(res,friendsSnapshot(db,user));
+      if(path==='/api/friends/invitations'&&method==='POST')return success(res,createInvite(db,user),201);
+      if(path==='/api/friends/requests'&&method==='POST'){
+        const data=await body(req);return success(res,requestFriend(db,user,data.code),201);
       }
+      const response=path.match(/^\/api\/friends\/requests\/([0-9a-f-]{36})\/(accept|decline)$/);
+      if(response&&method==='POST')return success(res,respondFriend(db,user,response[1],response[2]==='accept'));
+      const remove=path.match(/^\/api\/friends\/([0-9a-f-]{36})$/);
+      if(remove&&method==='DELETE')return success(res,removeFriend(db,user,remove[1]));
       if(!user.display_name)return failure(res,409,'Сначала укажи имя в профиле');
       if(path==='/api/attempts'&&method==='POST'){
         const obj=await body(req);
@@ -100,7 +112,7 @@ export function makeHandler(db,{dev=process.env.DEV_MODE==='1'}={}){
       }
       return failure(res,404,'Not found');
     }catch(e){
-      const isClient=/^(Unknown|All puzzles|No puzzles|Attempt|Illegal|No active|Broken puzzle|Trivial|Invalid|Duplicate|Необходимо|Puzzle did not|Request too large|No hint)/.test(e.message);
+      const isClient=/^(Unknown|All puzzles|No puzzles|Attempt|Illegal|No active|Broken puzzle|Trivial|Invalid|Duplicate|Необходимо|Puzzle did not|Request too large|No hint|Friends|Friend|Invitation|Already friends|Too many|Public leaderboard)/.test(e.message);
       if(!isClient)console.error('Server error:',e.message);
       return failure(res,isClient?400:500,isClient?e.message:'Internal server error');
     }

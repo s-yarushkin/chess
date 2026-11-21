@@ -34,5 +34,5 @@ export function loginTelegram(db, telegramId) {
     return user;
   });
 }
-export function publicUser(u){return {id:u.id,displayName:u.display_name,leaderboardOptIn:!!u.leaderboard_opt_in,points:u.points,solved:u.solved_count,skillRating:u.skill_rating};}
+export function publicUser(u){return {id:u.id,displayName:u.display_name,leaderboardOptIn:false,friendsOptIn:!!u.friends_opt_in,points:u.points,solved:u.solved_count,skillRating:u.skill_rating};}
 export function validName(s){if(typeof s!=='string')return false;const t=s.trim();return t.length>=2 && t.length<=30 && !/[<>\x00-\x1f]/.test(t);}

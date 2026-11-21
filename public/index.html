@@ -19,33 +19,44 @@
     <button class="icon-btn" id="profileButton" aria-label="Профиль" title="Профиль">☻</button>
   </header>
   <nav class="tabs" aria-label="Режим игры">
-    <button class="tab selected" data-mode="progressive">🚀 По порядку</button>
+    <button class="tab selected" data-mode="progressive">🚀 Школьный путь</button>
     <button class="tab" data-mode="mate1">♟ Мат в 1</button>
     <button class="tab" data-mode="mate2">♜ Мат в 2</button>
     <button class="tab" data-mode="mate3">♛ Мат в 3</button>
     <button class="tab" data-mode="draw">🤝 Спаси ничью</button>
-    <button class="tab" data-mode="leaderboard">🏆 Рейтинг</button>
+    <button class="tab" data-mode="friends">🤝 Друзья</button>
   </nav>
   <main class="game-layout">
     <section class="board-panel" aria-label="Игровое поле">
-      <div class="board-header"><div class="turn"><span class="turn-disc" id="turnDisc"></span><strong id="turnLabel">Ход белых</strong></div><span class="challenge" id="challenge">Прогрессивный режим</span></div>
+      <div class="board-header"><div class="turn"><span class="turn-disc" id="turnDisc"></span><strong id="turnLabel">Ход белых</strong></div><span class="challenge" id="challenge">Школьный путь</span></div>
       <div class="board-wrap" id="boardWrap"><div id="board" class="board" role="grid" aria-label="Шахматная доска"></div><div class="fx" id="effects" aria-hidden="true"></div></div>
       <div class="game-buttons"><button id="hint" class="button soft">✦ Подсказка</button><button id="skip" class="button outline">Пропустить</button><button id="next" class="button primary">Следующая →</button></div>
     </section>
     <aside class="info-panel">
-      <div class="eyebrow">Шахматная школа · твой прогресс</div>
+      <div class="eyebrow">Шахматная школа · 8–9 лет · 1–2 занятия в неделю</div>
       <div class="level-panel"><div class="level-caption"><b id="levelName">Разведчик · уровень 1</b><span id="levelCount">0/5</span></div><div class="level-track" role="progressbar" id="levelBar" aria-label="Прогресс уровня" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"><span id="levelFill"></span></div></div>
+      <div class="school-mini" aria-live="polite"><strong id="schoolStage">Шахматный следопыт</strong><span id="weekMission">За 7 дней: 0/8 задач</span><div class="weekly-track"><span id="weeklyFill"></span></div></div>
       <h1 id="title">Шахматная академия</h1>
       <p id="description">Найди сильнейший ход и доведи комбинацию до конца. Фигуры всегда подписаны цветом.</p>
       <div id="notice" class="notice">Выбери фигуру и нажми на клетку, куда хочешь её поставить.</div>
       <div id="hintMessage" class="hint-message" hidden></div>
-      <div class="stats"><div><small>Сложность</small><b id="difficulty">—</b></div><div><small>Награда</small><b id="reward">★ —</b></div><div><small>Рейтинг игрока</small><b id="skill">800</b></div></div>
+      <div class="stats"><div><small>Уровень задачи</small><b id="difficulty">—</b></div><div><small>Награда</small><b id="reward">★ —</b></div><div><small>Миссия</small><b id="sessionCount">0/5</b></div></div>
       <div class="foot"><button class="badges-link" id="badgesLink">🏅 Достижения <b id="badgeCount">0</b></button><span id="status">Не авторизован</span></div>
     </aside>
   </main>
-  <dialog id="profile" class="dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>Мой профиль</h2><label for="name">Имя или никнейм</label><input type="text" id="name" maxlength="30" minlength="2" autocomplete="nickname" placeholder="Например, Лёша" required><label class="check"><input id="publicRank" type="checkbox"> Показывать мой ник в общем рейтинге</label><small>Участие добровольное. Настоящее имя указывать не обязательно.</small><button type="button" class="button primary" id="saveProfile">Сохранить</button><p id="profileError"></p></form></dialog>
+  <dialog id="profile" class="dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>Мой профиль</h2><label for="name">Имя или никнейм</label><input type="text" id="name" maxlength="30" minlength="2" autocomplete="nickname" placeholder="Например, Лёша" required><label class="check"><input id="friendsOptIn" type="checkbox"> Разрешить делиться прогрессом с подтверждёнными друзьями</label><small>Только с разрешения взрослого. Не указывай фамилию, школу, телефон или адрес. Друзья видят только никнейм и учебные успехи. Общего рейтинга детей нет.</small><button type="button" class="button primary" id="saveProfile">Сохранить</button><p id="profileError"></p></form></dialog>
   <dialog id="auth" class="dialog"><div><h2>Добро пожаловать!</h2><p>Открой игру через Telegram. При первом входе выбери своё имя или никнейм.</p><div id="devLogin" hidden><label for="devName">Локальный тестовый вход</label><input id="devName" placeholder="Имя тестового игрока" minlength="2" maxlength="30"><button class="button primary" id="devEnter">Войти (только локально)</button></div><p id="authError"></p></div></dialog>
-  <dialog id="leaderboard" class="dialog"><form method="dialog"><button class="close">×</button><h2>Рейтинг игроков</h2><p>В рейтинге только те, кто захотел участвовать. Имена — выбранные никнеймы.</p><div class="ranking" id="rankings"></div></form></dialog>
+  <dialog id="friends" class="dialog friends-dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>🤝 Шахматный отряд</h2><p>У каждого свой темп! Смотри, чему научились друзья за последние 7 дней. Здесь нет общего рейтинга, чата и поиска незнакомцев.</p>
+    <div class="friend-status" id="friendStatus">Загружаем...</div>
+    <div class="friend-actions" id="friendActions">
+      <button type="button" class="button soft" id="createFriendCode">Создать код приглашения</button>
+      <div class="code-row"><input id="friendCode" type="text" placeholder="Код от друга" maxlength="24" autocomplete="off" aria-label="Код приглашения"><button type="button" class="button primary" id="joinFriend">Отправить запрос</button></div>
+      <div class="invite-result" id="inviteResult" hidden></div>
+    </div>
+    <h3>Мои друзья</h3><div class="friends-list" id="friendsList"></div>
+    <h3>Запросы в друзья</h3><div class="friends-list" id="friendRequests"></div>
+    <small>Приглашение действительно 48 часов и используется один раз. После обмена кодом оба игрока подтверждают дружбу. Любого друга можно удалить.</small>
+  </form></dialog>
   <dialog id="achievements" class="dialog medals-dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>Мои достижения</h2><p>Награды за настоящие решения. Никаких ежедневных обязательств!</p><div id="medals" class="medals"></div><div class="medals-note">⚡ Серия растёт только за новые задачи, решённые без ошибок и подсказок. За пропуск серия обнуляется.</div></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
 </div>

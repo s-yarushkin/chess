@@ -44,3 +44,21 @@
 @media(max-height:700px){.game-layout .info-panel p{display:none}.info-panel{gap:5px}.info-panel .level-panel{padding:6px 9px}}
 @media(max-height:590px){.board-header,.board-wrap,.game-buttons{width:min(100%,calc(100dvh - 300px),470px)}.info-panel .stats,.info-panel .foot{display:none}}
 @media(prefers-reduced-motion:reduce){.fx svg line,.fx .spark,.fx .king-ring,.fx .victory-banner,.board-wrap.bad-move,.level-track span{animation:none!important;transition:none!important}}
+/* Junior chess school: calm progression and opt-in friends, no public leaderboards. */
+.school-mini{padding:9px 11px;border:1px solid #c8eadf;border-radius:12px;background:#f0fcf6;display:flex;flex-wrap:wrap;gap:2px 9px;align-items:center;font-size:12px}
+.school-mini strong{color:#075e50}.school-mini span{color:#4d7072;font-weight:700}
+.weekly-track{width:100%;height:7px;background:#cbece2;border-radius:7px;overflow:hidden;margin-top:4px}
+.weekly-track span{display:block;height:100%;width:0;background:linear-gradient(90deg,#1aa18a,#ffcf61);transition:width .3s}
+.friends-dialog{width:min(590px,calc(100vw - 20px));max-height:86dvh;overflow-y:auto}
+.friends-dialog h3{font-size:15px;margin:16px 0 8px}
+.friend-status{background:#e8f6ef;color:#14564c;padding:10px;border-radius:10px;font-size:13px}
+.friend-actions{padding:12px 0}.friend-actions .button{margin:4px 0}
+.code-row{display:flex;gap:8px;align-items:center}.code-row input{flex:1;min-width:0;text-transform:uppercase}
+.friend-row{display:flex;align-items:center;justify-content:space-between;gap:7px;background:#f7f9f3;border-radius:11px;padding:9px;margin:5px 0;font-size:13px}
+.friend-row .button{width:auto;min-height:33px;flex:none;margin:0;padding:6px 10px}
+.invite-result{font-family:ui-monospace,monospace;overflow-wrap:anywhere;background:#fff5cf;padding:12px;border-radius:11px;margin-top:8px}
+@media(max-width:760px){.school-mini{font-size:10px;padding:5px 8px}.friends-dialog{padding:17px}.friends-dialog .friend-row{flex-wrap:wrap}.friend-actions .code-row .button{font-size:11px}}
+@media(max-height:700px){.school-mini{padding:4px 7px;font-size:10px}.school-mini .weekly-track{height:5px;margin-top:1px}}
+@media(max-width:760px){.board-panel .board-wrap{height:auto;aspect-ratio:1/1;flex:none;max-height:none}.board-panel .board{aspect-ratio:1/1}}
+
+.tab:disabled{opacity:.52;cursor:not-allowed}

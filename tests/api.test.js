@@ -32,8 +32,9 @@ test('full HTTP journey: login, profile, random task, score and private leaderbo
   assert.equal(afterSolve.game.bestStreak,1);
   assert.ok(afterSolve.game.badges.find(b=>b.id==='first'&&b.earned));
   assert.deepEqual((await call('/api/leaderboard')).data.users,[]);
-  const optIn=await call('/api/me','PATCH',{leaderboardOptIn:true});assert.equal(optIn.data.leaderboardOptIn,true);
-  assert.equal((await call('/api/leaderboard')).data.users[0].name,'Лёша');
+  assert.equal((await call('/api/me','PATCH',{leaderboardOptIn:true})).status,400);
+  const friendsOpt=await call('/api/me','PATCH',{friendsOptIn:true});assert.equal(friendsOpt.data.friendsOptIn,true);
+  assert.equal((await call('/api/friends')).data.friends.length,0);
   const already=await call(`/api/attempts/${attempt.data.id}/move`,'POST',{uci:chosen.line[0]});assert.equal(already.status,400);
   const second=await call('/api/attempts','POST',{mode:'category',category:'mate1'});assert.equal(second.status,201);
   assert.notEqual(second.data.position,attempt.data.position);
