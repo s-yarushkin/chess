@@ -16,7 +16,7 @@ const success=(res,data,status=200)=>{res.writeHead(status,{'Content-Type':'appl
 function failure(res,code,message){success(res,{error:message},code);}
 const equals=(a,b)=>{const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y);};
 async function body(req){let data='';for await(const chunk of req){data+=chunk;if(data.length>12000)throw Error('Request too large');}try{return JSON.parse(data||'{}')}catch{throw Error('Invalid JSON');}}
-const featureConfig=()=>({demo:process.env.DEV_MODE==='1',botConfigured:!!process.env.TG_BOT_TOKEN,leaderboardOptIn:false,privateFriends:true});
+const featureConfig=()=>({demo:process.env.DEV_MODE==='1',botConfigured:!!process.env.TG_BOT_TOKEN,leaderboardOptIn:false,privateFriends:true,pilot:process.env.NODE_ENV==='production',friendsEnabled:process.env.NODE_ENV!=='production'||process.env.FRIENDS_ENABLED==='1'});
 async function botRespond(chatId,text,opts){const token=process.env.TG_BOT_TOKEN;if(!token)return;const response=await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:chatId,text,...opts}),signal:AbortSignal.timeout(9000)});if(!response.ok)throw Error('Telegram API returned error');}
 async function handleTelegramWebhook(req,res){
   const expected=process.env.TG_WEBHOOK_SECRET||'';
@@ -45,16 +45,26 @@ export function makeHandler(db,{dev=process.env.DEV_MODE==='1'}={}){
     try {url=new URL(req.url,'http://localhost');}catch{return failure(res,400,'Bad URL');}
     const path=url.pathname,method=req.method;
     try{
-      if(path==='/healthz'&&method==='GET')return success(res,{status:'ok',database:'connected'});
+      if(path==='/healthz'&&method==='GET'){db.prepare('SELECT 1').get();return success(res,{status:'ok'});}
+      if(path==='/readyz'&&method==='GET'){
+        const counts=Object.fromEntries(puzzleCounts(db).map(row=>[row.category,row.count]));
+        const targets={mate1:900,mate2:1100,mate3:1000};
+        const ready=Object.entries(targets).every(([cat,n])=>(counts[cat]||0)>=n);
+        return success(res,{ready,catalog:counts},ready?200:503);
+      }
       if(path==='/api/config'&&method==='GET')return success(res,featureConfig());
       if(path==='/telegram/webhook'&&method==='POST')return await handleTelegramWebhook(req,res);
       if(path==='/api/auth/telegram'&&method==='POST'){
         const obj=await body(req),id=validateInitData(obj.initData,process.env.TG_BOT_TOKEN);
+        if(process.env.NODE_ENV==='production'){
+          const allowed=new Set((process.env.PILOT_TELEGRAM_IDS||'').split(',').map(v=>v.trim()).filter(Boolean));
+          if(!allowed.has(id.telegramId))return failure(res,403,'Доступ только приглашённым взрослым участникам теста.');
+        }
         const user=loginTelegram(db,id.telegramId);
         return success(res,{token:makeSession(db,user.id),user:publicUser(user),suggestedName:id.suggestion});
       }
       if(path==='/api/auth/dev'&&method==='POST'){
-        if(!dev||!(ip==='127.0.0.1'||ip==='::1'||ip==='::ffff:127.0.0.1'))return failure(res,404,'Not found');
+        if(process.env.NODE_ENV==='production'||!dev||!(ip==='127.0.0.1'||ip==='::1'||ip==='::ffff:127.0.0.1'))return failure(res,404,'Not found');
         const obj=await body(req);
         if(!validName(obj.name))return failure(res,400,'Имя от 2 до 30 символов');
         const alias='dev:'+createHash('sha256').update(obj.name.trim()).digest('hex').slice(0,18);
@@ -70,12 +80,17 @@ export function makeHandler(db,{dev=process.env.DEV_MODE==='1'}={}){
       const token=(req.headers.authorization||'').replace(/^Bearer /,'');
       const user=findSession(db,token);
       if(!user)return failure(res,401,'Необходимо войти');
+      if(process.env.NODE_ENV==='production'){
+        const allowed=new Set((process.env.PILOT_TELEGRAM_IDS||'').split(',').map(v=>v.trim()).filter(Boolean));
+        if(!allowed.has(String(user.telegram_id)))return failure(res,403,'Доступ к пилоту закрыт для этого аккаунта.');
+      }
       if(path==='/api/me'&&method==='GET')return success(res,{...publicUser(user),game:progressSnapshot(db,user),school:schoolProgress(db,user)});
       if(path==='/api/me'&&method==='PATCH'){
         const obj=await body(req);
         if(obj.displayName!==undefined){if(!validName(obj.displayName))return failure(res,400,'Имя от 2 до 30 символов');db.prepare('UPDATE users SET display_name=? WHERE id=?').run(obj.displayName.trim(),user.id);}
         if(obj.leaderboardOptIn===true)return failure(res,400,'Public leaderboard is disabled for junior players');
         if(obj.friendsOptIn!==undefined){
+          if(process.env.NODE_ENV==='production'&&process.env.FRIENDS_ENABLED!=='1'&&obj.friendsOptIn)return failure(res,403,'Друзья отключены на первом этапе пилота.');
           if(typeof obj.friendsOptIn!=='boolean')return failure(res,400,'friendsOptIn must be boolean');
           db.prepare('UPDATE users SET friends_opt_in=? WHERE id=?').run(Number(obj.friendsOptIn),user.id);
           if(!obj.friendsOptIn)db.prepare('UPDATE friend_invites SET used_at=? WHERE owner_id=? AND used_at IS NULL').run(Date.now(),user.id);
@@ -85,6 +100,10 @@ export function makeHandler(db,{dev=process.env.DEV_MODE==='1'}={}){
       }
       // For 8–9 year old players there is no global child discovery or public ranking.
       if(path==='/api/leaderboard'&&method==='GET')return success(res,{users:[],private:true,note:'Используй закрытый круг друзей.'});
+      if(process.env.NODE_ENV==='production'&&process.env.FRIENDS_ENABLED!=='1'&&path.startsWith('/api/friends')){
+        if(path==='/api/friends'&&method==='GET')return success(res,{enabled:false,friends:[],incoming:[],outgoing:[],pilotRestricted:true});
+        return failure(res,403,'Друзья пока отключены до проверки родительского доступа.');
+      }
       if(path==='/api/friends'&&method==='GET')return success(res,friendsSnapshot(db,user));
       if(path==='/api/friends/invitations'&&method==='POST')return success(res,createInvite(db,user),201);
       if(path==='/api/friends/requests'&&method==='POST'){
@@ -121,6 +140,11 @@ export function makeHandler(db,{dev=process.env.DEV_MODE==='1'}={}){
 export function makeServer(db,{dev}={}){return createServer(makeHandler(db,{dev}));}
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   const port=Number(process.env.PORT||8094),host=process.env.HOST||'127.0.0.1';
-  if(process.env.NODE_ENV==='production'&&!process.env.TG_BOT_TOKEN)throw Error('TG_BOT_TOKEN is required in production');
+  if(process.env.NODE_ENV==='production'){
+    if(process.env.DEV_MODE==='1')throw Error('DEV_MODE must be 0 in production');
+    if(!process.env.TG_BOT_TOKEN)throw Error('TG_BOT_TOKEN required in production');
+    if(!(process.env.PILOT_TELEGRAM_IDS||'').trim())throw Error('PILOT_TELEGRAM_IDS required in production');
+    if(!['0.0.0.0','127.0.0.1'].includes(process.env.HOST))throw Error('Set HOST in container');
+  }
   const db=openDb();makeServer(db).listen(port,host,()=>console.log(`Chess Academy API listening on ${host}:${port} (dev=${process.env.DEV_MODE==='1'})`));
 }

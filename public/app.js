@@ -6,7 +6,7 @@ const GLYPHS={K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟︎',k:'♚',q:'♛'
 const PIECES={k:'король',q:'ферзь',r:'ладья',b:'слон',n:'конь',p:'пешка'};
 const labels={progressive:'Школьный путь',mate1:'Мат в один ход',mate2:'Мат в два хода',mate3:'Мат в три хода',draw:'Спаси ничью'};
 const points={mate1:1,mate2:2,mate3:3,draw:3};
-const state={token:sessionStorage.getItem('chess_session')||'',me:null,attempt:null,selected:-1,mode:'progressive',busy:false,lastMove:[],hints:0,sessionDone:0};
+const state={features:{friendsEnabled:true,pilot:false},token:sessionStorage.getItem('chess_session')||'',me:null,attempt:null,selected:-1,mode:'progressive',busy:false,lastMove:[],hints:0,sessionDone:0};
 const tg=window.Telegram?.WebApp;
 const prefersReduce=window.matchMedia?.('(prefers-reduced-motion: reduce)');
 const setting=(k,otherwise)=>{try{return localStorage.getItem(k)===null?otherwise:localStorage.getItem(k)==='true';}catch{return otherwise;}};
@@ -139,6 +139,7 @@ async function refreshMe(){
  $('points').textContent=me.points;$('solved').textContent=me.solved;
  $('status').textContent=me.displayName||'Заполни профиль';$('name').value=me.displayName;
  $('friendsOptIn').checked=me.friendsOptIn;
+ $('friendsOptIn').disabled=!state.features.friendsEnabled;
  $('streak').textContent=me.game.streak;
  const p=me.game.progress;$('levelName').textContent=`Уровень ${me.game.level} · ${me.game.levelName}`;
  $('levelCount').textContent=p.target?`${p.current}/${p.target}`:'Максимальный уровень';
@@ -222,6 +223,9 @@ async function refreshFriends(){
 }
 async function begin(){
  try{const config=await api('/api/config');
+  state.features=config;
+  const tab=document.querySelector('.tab[data-mode="friends"]');if(tab)tab.hidden=!config.friendsEnabled;
+  const label=$('friendsOptIn').closest('label');if(label)label.hidden=!config.friendsEnabled;
   if(!state.token){if(tg?.initData){const login=await api('/api/auth/telegram',{method:'POST',body:JSON.stringify({initData:tg.initData})});
    state.token=login.token;sessionStorage.setItem('chess_session',state.token);
   }else{if(config.demo)$('devLogin').hidden=false;$('auth').showModal();return;}}
@@ -231,7 +235,7 @@ async function begin(){
 $('devEnter').addEventListener('click',async()=>{try{const login=await api('/api/auth/dev',{method:'POST',body:JSON.stringify({name:$('devName').value})});
  state.token=login.token;sessionStorage.setItem('chess_session',state.token);$('auth').close();await refreshMe();await newPuzzle();
  }catch(e){$('authError').textContent=e.message;}});
-$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,friendsOptIn:$('friendsOptIn').checked})});
+$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,friendsOptIn:state.features.friendsEnabled&&$('friendsOptIn').checked})});
  $('profile').close();await refreshMe();if(!state.attempt)await newPuzzle();}catch(e){$('profileError').textContent=e.message;}});
 $('createFriendCode').addEventListener('click',async()=>{try{const d=await api('/api/friends/invitations',{method:'POST',body:'{}'});
   const code=$('inviteResult');code.hidden=false;code.textContent='Код для друга: '+d.code+' · 48 часов. Передавай только знакомым.';

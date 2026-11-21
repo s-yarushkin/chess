@@ -11,8 +11,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm test
-      - run: npm run catalog:check
-      - run: npm run catalog:import
+      - name: Chess, HTTP, privacy and backup tests
+        run: npm test
+      - name: Check all 3,000 positions
+        run: npm run catalog:check
+      - name: Import full catalog to disposable DB
+        run: npm run catalog:import
         env:
           DB_PATH: /tmp/chess-school-catalog.sqlite
+      - name: Release config and container build
+        run: |
+          cp .env.pilot.example .env
+          sed -i 's/chess.example.com/chess.example.org/g;s/REPLACE_FROM_BOTFATHER/123456789:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/;s/REPLACE_WITH_GENERATED_SECRET/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/;s/REPLACE_WITH_ADULT_TELEGRAM_ID/123456789/' .env
+          chmod 600 .env
+          python3 scripts/validate-deploy.py .env
+          docker compose --env-file .env config --quiet
+          docker build -t chess-academy:ci .

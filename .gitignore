@@ -4,3 +4,12 @@ storage/
 node_modules/
 *.log
 .DS_Store
+
+.env
+.env.*
+!.env.example
+!.env.pilot.example
+backups/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

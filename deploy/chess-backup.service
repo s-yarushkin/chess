@@ -1,0 +1,10 @@
+[Unit]
+Description=Chess Academy consistent SQLite backup
+Requires=docker.service
+After=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/chess
+ExecStart=/opt/chess/scripts/backup.sh
+User=root
+UMask=0077
