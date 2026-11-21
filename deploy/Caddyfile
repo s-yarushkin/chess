@@ -1,0 +1,8 @@
+{$APP_DOMAIN} {
+    encode zstd gzip
+    header {
+        X-Robots-Tag "noindex, nofollow, noarchive"
+        Strict-Transport-Security "max-age=31536000"
+    }
+    reverse_proxy chess:8094
+}

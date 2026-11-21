@@ -1,0 +1,14 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+!.env.pilot.example
+storage
+backups
+node_modules
+*.sqlite
+*.sqlite-*
+*.zip
+*.bundle
+.DS_Store

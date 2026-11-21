@@ -1,0 +1,54 @@
+# Dedicated single-instance adult pilot. No external Node/SQLite ports.
+name: chess-academy
+services:
+  chess:
+    build: .
+    image: chess-academy:pilot
+    init: true
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DEV_MODE: "0"
+      HOST: 0.0.0.0
+      PORT: "8094"
+      DB_PATH: /app/storage/chess.sqlite
+    expose:
+      - "8094"
+    volumes:
+      - chess_storage:/app/storage
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8094/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      chess:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  chess_storage:
+  caddy_data:
+  caddy_config:

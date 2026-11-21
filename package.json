@@ -1,6 +1,6 @@
 {
   "name": "chess-academy",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -15,7 +15,8 @@
     "bot:setup": "node scripts/setup-bot.js",
     "audit:catalog": "node scripts/audit-catalog.js",
     "catalog:check": "node scripts/school-catalog.js",
-    "catalog:import": "node scripts/school-catalog.js --import"
+    "catalog:import": "node scripts/school-catalog.js --import",
+    "pilot:check": "python3 scripts/validate-deploy.py .env"
   },
   "license": "UNLICENSED"
 }
