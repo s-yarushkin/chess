@@ -109,7 +109,9 @@ async function choose(i){
   state.attempt.position=result.position;state.attempt.status=result.completed?'solved':'active';
   state.lastMove=result.defense?[result.defense.slice(0,2),result.defense.slice(2,4)].map(sq=>{const f='abcdefgh'.indexOf(sq[0]),r=8-Number(sq[1]);return r*16+f;}):[from,to];
   if(result.completed){
-   notice(victoryText(result),'success');board();successFX(result.category,result.points);sound('success');haptic('success');
+   notice(victoryText(result),'success');
+   if(result.lesson?.reflection){$('description').textContent='Урок: '+result.lesson.focus+'. '+result.lesson.reflection;}
+   board();successFX(result.category,result.points);sound('success');haptic('success');
    const oldBadges=new Set(state.me?.game?.badges.filter(b=>b.earned).map(b=>b.id)||[]);
    try{await refreshMe();const newly=state.me.game.badges.filter(b=>b.earned&&!oldBadges.has(b.id));
     if(newly.length)toast(`Новая награда: ${newly.map(b=>b.title).join(', ')}!`);
@@ -149,8 +151,8 @@ async function newPuzzle(){
  try{
   const params=state.mode==='progressive'?{mode:'progressive'}:{mode:'category',category:state.mode};
   const a=await api('/api/attempts',{method:'POST',body:JSON.stringify(params)});state.attempt=a;
-  $('title').textContent=labels[a.category];$('description').textContent=a.category==='draw'?'В этой позиции нужно добиться настоящей ничьей. Найди точную защиту.':
-   a.source==='lichess'?'Реальная позиция из партии. Найди сильнейшую комбинацию.':'Учебная позиция. Найди мат и рассчитай ответ соперника.';
+  $('title').textContent=labels[a.category];
+  $('description').textContent=a.lesson?.prompt||(a.category==='draw'?'Найди доказанную защиту от поражения.':'Найди сильнейшую комбинацию и проверь ответы соперника.');
   $('difficulty').textContent=a.rating;$('reward').textContent='★ '+(points[a.category]||0);
   notice('Твой ход! Выбери свою фигуру — увидишь доступные клетки.');
  }catch(e){state.attempt=null;notice(e.message,'error');$('title').textContent='Задачи пока не загружены';
