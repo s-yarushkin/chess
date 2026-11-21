@@ -1,6 +1,6 @@
 {
   "name": "chess-academy",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -13,7 +13,9 @@
     "import:lichess": "node scripts/import-lichess.js",
     "import:demo": "node scripts/import-demo.js",
     "bot:setup": "node scripts/setup-bot.js",
-    "audit:catalog": "node scripts/audit-catalog.js"
+    "audit:catalog": "node scripts/audit-catalog.js",
+    "catalog:check": "node scripts/school-catalog.js",
+    "catalog:import": "node scripts/school-catalog.js --import"
   },
   "license": "UNLICENSED"
 }

@@ -1,6 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {parseFen,fenOf,legal,key,apply,checkmate,stalemate,insufficient,outcome,checked} from './chess.js';
 import {transaction} from './db.js';
+import {coachingFor} from './coach.js';
 
 export const BASE_POINTS=Object.freeze({mate1:1,mate2:2,mate3:3,draw:3});
 const MAX_LINE=10;
@@ -78,8 +79,9 @@ export function startAttempt(db,user,mode,category){
   });
 }
 export function publicAttempt(db,attempt){
-  const puzzle=db.prepare('SELECT fen,category,rating,source FROM puzzles WHERE id=?').get(attempt.puzzle_id);
-  return {id:attempt.id,position:attempt.current_fen,category:puzzle.category,rating:puzzle.rating,source:puzzle.source,startedPosition:puzzle.fen,errors:attempt.errors,hints:attempt.hints,status:attempt.status};
+  const puzzle=db.prepare('SELECT fen,category,rating,source,theme FROM puzzles WHERE id=?').get(attempt.puzzle_id);
+  const {title,prompt,method}=coachingFor(puzzle);
+  return {id:attempt.id,position:attempt.current_fen,category:puzzle.category,rating:puzzle.rating,source:puzzle.source,startedPosition:puzzle.fen,errors:attempt.errors,hints:attempt.hints,status:attempt.status,lesson:{title,prompt,method}};
 }
 export function submitMove(db,user,attemptId,uci){
   return transaction(db,()=>{
@@ -119,7 +121,7 @@ export function submitMove(db,user,attemptId,uci){
       }
     }
     db.prepare('UPDATE attempts SET current_fen=?,cursor=?,status=?,updated_at=? WHERE id=?').run(fenOf(next),cursor,completed?'solved':'active',Date.now(),a.id);
-    return {correct:true,completed,position:fenOf(next),defense,points:firstSolve?earned:0,category:p.category,firstSolve};
+    return {correct:true,completed,position:fenOf(next),defense,points:firstSolve?earned:0,category:p.category,firstSolve,lesson:completed?coachingFor(p):undefined};
   });
 }
 export function hint(db,user,attemptId){

@@ -12,3 +12,7 @@ jobs:
         with:
           node-version: 22
       - run: npm test
+      - run: npm run catalog:check
+      - run: npm run catalog:import
+        env:
+          DB_PATH: /tmp/chess-school-catalog.sqlite
