@@ -44,6 +44,26 @@ export function openDb(file = process.env.DB_PATH || './storage/chess.sqlite') {
   const cols=new Set(db.prepare('PRAGMA table_info(users)').all().map(c=>c.name));
   if(!cols.has('clean_streak')) db.exec('ALTER TABLE users ADD COLUMN clean_streak INTEGER NOT NULL DEFAULT 0');
   if(!cols.has('best_streak')) db.exec('ALTER TABLE users ADD COLUMN best_streak INTEGER NOT NULL DEFAULT 0');
+  if(!cols.has('friends_opt_in')) db.exec('ALTER TABLE users ADD COLUMN friends_opt_in INTEGER NOT NULL DEFAULT 0');
+  db.exec(`CREATE TABLE IF NOT EXISTS friend_invites (
+      id TEXT PRIMARY KEY,owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      code_hash TEXT NOT NULL UNIQUE,created_at INTEGER NOT NULL,expires_at INTEGER NOT NULL,used_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS friend_requests (
+      id TEXT PRIMARY KEY,requester_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      recipient_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status TEXT NOT NULL CHECK(status IN ('pending','accepted','rejected')),
+      created_at INTEGER NOT NULL,responded_at INTEGER,
+      CHECK(requester_id<>recipient_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_friend_requests_recipient ON friend_requests(recipient_id,status);
+    CREATE INDEX IF NOT EXISTS idx_friend_requests_requester ON friend_requests(requester_id,created_at);
+    CREATE TABLE IF NOT EXISTS friendships (
+      user_a TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      user_b TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY(user_a,user_b),CHECK(user_a<user_b)
+    );`);
   return db;
 }
 

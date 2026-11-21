@@ -1,6 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {parseFen,fenOf,legal,key,apply,checkmate,stalemate,insufficient,outcome,checked} from './chess.js';
 import {transaction} from './db.js';
+import {chooseSchoolCategory,stageFor} from './school.js';
 import {coachingFor} from './coach.js';
 
 export const BASE_POINTS=Object.freeze({mate1:1,mate2:2,mate3:3,draw:3});
@@ -36,36 +37,28 @@ export function insertPuzzle(db,p){
   return db.prepare(`INSERT OR IGNORE INTO puzzles(id,fen,category,rating,line_json,source,source_url,quality,theme,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)`).run(item.id,item.fen,item.category,item.rating,JSON.stringify(item.line),item.source,item.source_url,item.quality,item.theme,Date.now()).changes;
 }
 export function puzzleCounts(db){return db.prepare('SELECT category,COUNT(*) AS count FROM puzzles GROUP BY category ORDER BY category').all();}
-function pickCategory(db, user, mode, category){
-  if(mode==='category') {if(!BASE_POINTS[category])throw Error('Unknown category'); return category;}
-  const n=user.solved_count;
-  const ranges=n<15?['mate1']:n<35?['mate1','mate2']:n<70?['mate1','mate2','mate3']:['mate1','mate2','mate3','draw'];
-  const options=db.prepare(`SELECT category,COUNT(*) AS count FROM puzzles WHERE category IN (${ranges.map(()=>'?').join(',')}) GROUP BY category`).all(...ranges).filter(x=>x.count>0);
-  if(!options.length)throw Error('No puzzles imported');
-  const preferred=options.filter(o=>o.category!=='mate1');
-  const pool=preferred.length && Math.random()<.65?preferred:options;
-  return pool[Math.floor(Math.random()*pool.length)].category;
-}
 export function selectPuzzle(db,user,mode='progressive',category){
-  const chosen=pickCategory(db,user,mode,category);
-  function poolFor(cat, avoidRecent){
+  const chosen=mode==='category'?category:chooseSchoolCategory(db,user);
+  if(!BASE_POINTS[chosen])throw Error('Unknown category');
+  const stage=stageFor(db,user),min=stage.rating[0],max=stage.rating[1];
+  function poolFor(cat, avoidRecent, tiered){
     const recent=avoidRecent?`AND p.id NOT IN (SELECT puzzle_id FROM attempts WHERE user_id=? AND started_at>?)`:'';
-    const params=[user.id,cat,...(avoidRecent?[user.id,Date.now()-7*86400_000]:[]),user.skill_rating];
-    return db.prepare(`SELECT p.* FROM puzzles p LEFT JOIN completions c ON c.puzzle_id=p.id AND c.user_id=? WHERE p.category=? AND c.puzzle_id IS NULL ${recent} ORDER BY CASE WHEN p.source='lichess' THEN 0 ELSE 1 END, ABS(p.rating-?) LIMIT 250`).all(...params);
+    const tier=tiered?'AND p.rating BETWEEN ? AND ?':'';
+    const params=[user.id,cat,...(avoidRecent?[user.id,Date.now()-7*86400_000]:[]),...(tiered?[min,max]:[]),Math.min(max,Math.max(min,user.skill_rating))];
+    return db.prepare(`SELECT p.* FROM puzzles p LEFT JOIN completions c ON c.puzzle_id=p.id AND c.user_id=?
+      WHERE p.category=? AND c.puzzle_id IS NULL ${recent} ${tier}
+      ORDER BY CASE WHEN p.source='lichess' THEN 0 ELSE 1 END, ABS(p.rating-?) LIMIT 250`).all(...params);
   }
-  let unseen=poolFor(chosen,true);
-  if(!unseen.length)unseen=poolFor(chosen,false);
-  if(!unseen.length && mode==='progressive'){
-    for(const alt of ['mate1','mate2','mate3','draw']){
-      if(alt===chosen)continue;
-      unseen=poolFor(alt,true);if(!unseen.length)unseen=poolFor(alt,false);
-      if(unseen.length)break;
-    }
+  function tryCategory(cat){return poolFor(cat,true,true).length?poolFor(cat,true,true):
+    (poolFor(cat,false,true).length?poolFor(cat,false,true):
+    (poolFor(cat,true,false).length?poolFor(cat,true,false):poolFor(cat,false,false)));}
+  let unseen=tryCategory(chosen);
+  if(!unseen.length&&mode!=='category'){
+    for(const alt of ['mate1','mate2','mate3']){if(alt===chosen)continue;unseen=tryCategory(alt);if(unseen.length)break;}
   }
   if(!unseen.length)throw Error('All puzzles in this category have been solved');
-  const window=unseen.filter(p=>Math.abs(p.rating-user.skill_rating)<=350);
-  const pool=window.length?window:unseen.slice(0,Math.min(unseen.length,40));
-  return pool[Math.floor(Math.random()*Math.min(pool.length,80))];
+  // Keep the first 80 close to an appropriate rating. Shuffle so players don't repeat a predictable sequence.
+  return unseen[Math.floor(Math.random()*Math.min(unseen.length,80))];
 }
 export function startAttempt(db,user,mode,category){
   return transaction(db,()=>{
@@ -79,9 +72,8 @@ export function startAttempt(db,user,mode,category){
   });
 }
 export function publicAttempt(db,attempt){
-  const puzzle=db.prepare('SELECT fen,category,rating,source,theme FROM puzzles WHERE id=?').get(attempt.puzzle_id);
-  const {title,prompt,method}=coachingFor(puzzle);
-  return {id:attempt.id,position:attempt.current_fen,category:puzzle.category,rating:puzzle.rating,source:puzzle.source,startedPosition:puzzle.fen,errors:attempt.errors,hints:attempt.hints,status:attempt.status,lesson:{title,prompt,method}};
+  const puzzle=db.prepare('SELECT fen,category,rating,source FROM puzzles WHERE id=?').get(attempt.puzzle_id);
+  return {id:attempt.id,position:attempt.current_fen,category:puzzle.category,rating:puzzle.rating,source:puzzle.source,startedPosition:puzzle.fen,errors:attempt.errors,hints:attempt.hints,status:attempt.status,lesson:coachingFor(puzzle)};
 }
 export function submitMove(db,user,attemptId,uci){
   return transaction(db,()=>{
@@ -94,6 +86,11 @@ export function submitMove(db,user,attemptId,uci){
     if(!played)throw Error('Illegal move');
     const alternateMate=p.category.startsWith('mate') && (p.category==='mate1'||a.cursor===line.length-1) && checkmate(apply(position,played));
     if(line[a.cursor]!==uci && !alternateMate){
+      // A real-game Lichess puzzle can have other promising continuations. Without exhaustive
+      // engine adjudication we must not penalize an unverified alternate line as a blunder.
+      if(p.source==='lichess'&&p.category!=='mate1')return {correct:false,exploratory:true,
+        message:'Хорошая попытка! Давай попробуем найти учебную комбинацию. Этот ход пока не оценён.',
+        position:a.current_fen,errors:a.errors};
       db.prepare('UPDATE attempts SET errors=errors+1,updated_at=? WHERE id=?').run(Date.now(),a.id);
       return {correct:false,message:'Это законный ход, но он не решает заданную комбинацию.',position:a.current_fen,errors:a.errors+1};
     }
@@ -107,7 +104,7 @@ export function submitMove(db,user,attemptId,uci){
     if(completed){
       if(p.category.startsWith('mate')&&!checkmate(next))throw Error('Puzzle did not end in checkmate');
       if(p.category==='draw'&&!(stalemate(next)||insufficient(next)))throw Error('Puzzle did not end in draw');
-      earned=Math.max(0,BASE_POINTS[p.category]-(a.hints>0?1:0)-(a.errors>1?1:0));
+      earned=Math.max(1,BASE_POINTS[p.category]-(a.hints>0||a.errors>0?1:0));
       const done=db.prepare('INSERT OR IGNORE INTO completions(user_id,puzzle_id,points,solved_at) VALUES(?,?,?,?)').run(user.id,p.id,earned,Date.now());
       if(done.changes){
         firstSolve=true;

@@ -4,9 +4,9 @@ import {attackersToKing,encouragement} from '/fun.js';
 const $=id=>document.getElementById(id);
 const GLYPHS={K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟︎',k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟︎'};
 const PIECES={k:'король',q:'ферзь',r:'ладья',b:'слон',n:'конь',p:'пешка'};
-const labels={progressive:'По порядку',mate1:'Мат в один ход',mate2:'Мат в два хода',mate3:'Мат в три хода',draw:'Спаси ничью'};
+const labels={progressive:'Школьный путь',mate1:'Мат в один ход',mate2:'Мат в два хода',mate3:'Мат в три хода',draw:'Спаси ничью'};
 const points={mate1:1,mate2:2,mate3:3,draw:3};
-const state={token:sessionStorage.getItem('chess_session')||'',me:null,attempt:null,selected:-1,mode:'progressive',busy:false,lastMove:[],hints:0};
+const state={token:sessionStorage.getItem('chess_session')||'',me:null,attempt:null,selected:-1,mode:'progressive',busy:false,lastMove:[],hints:0,sessionDone:0};
 const tg=window.Telegram?.WebApp;
 const prefersReduce=window.matchMedia?.('(prefers-reduced-motion: reduce)');
 const setting=(k,otherwise)=>{try{return localStorage.getItem(k)===null?otherwise:localStorage.getItem(k)==='true';}catch{return otherwise;}};
@@ -89,7 +89,7 @@ function successFX(category,displayPoints){
 function wrongMoveFX(){if(prefs.effects&&!prefersReduce?.matches){$('boardWrap').classList.remove('bad-move');void $('boardWrap').offsetWidth;$('boardWrap').classList.add('bad-move');setTimeout(()=>$('boardWrap').classList.remove('bad-move'),450);}sound('error');haptic('error');}
 function victoryText(result){
  if(!result.firstSolve)return 'Задача пройдена! Повторные баллы не начисляются.';
- return `${result.category==='draw'?'Отличная защита!':'Мат найден!'} +${result.points} ★${result.points===0?' (подсказка или ошибки)':''}`;
+ return `${result.category==='draw'?'Отличная защита!':'Мат найден!'} +${result.points} ★. Главное — понял идею!`; 
 }
 async function choose(i){
  if(!state.attempt||state.busy||state.attempt.status!=='active')return;
@@ -109,13 +109,15 @@ async function choose(i){
   state.attempt.position=result.position;state.attempt.status=result.completed?'solved':'active';
   state.lastMove=result.defense?[result.defense.slice(0,2),result.defense.slice(2,4)].map(sq=>{const f='abcdefgh'.indexOf(sq[0]),r=8-Number(sq[1]);return r*16+f;}):[from,to];
   if(result.completed){
+   if(result.firstSolve){state.sessionDone=Math.min(5,state.sessionDone+1);$('sessionCount').textContent=state.sessionDone+'/5';}
    notice(victoryText(result),'success');
-   if(result.lesson?.reflection){$('description').textContent='Урок: '+result.lesson.focus+'. '+result.lesson.reflection;}
+   if(result.lesson?.reflection)$('description').textContent='Урок: '+result.lesson.focus+'. '+result.lesson.reflection;
    board();successFX(result.category,result.points);sound('success');haptic('success');
    const oldBadges=new Set(state.me?.game?.badges.filter(b=>b.earned).map(b=>b.id)||[]);
    try{await refreshMe();const newly=state.me.game.badges.filter(b=>b.earned&&!oldBadges.has(b.id));
     if(newly.length)toast(`Новая награда: ${newly.map(b=>b.title).join(', ')}!`);
-    else if(state.me.game.streak>=3)toast(`⚡ Серия: ${state.me.game.streak} безошибочных решений!`);
+    else if(state.sessionDone===5)toast('🏅 Миссия из пяти задач выполнена! Можно отдохнуть.');
+    else if(state.me.game.streak>=3)toast(`⚡ ${state.me.game.streak} чистых решений — отличный расчёт!`);
    }catch{toast('Задача решена. Не удалось обновить профиль.');}
   }else{notice(`Хорошо! ${result.defense?'Соперник ответил '+result.defense+'. Твой ход!':'Продолжай комбинацию!'}`);sound('step');}
  }catch(e){notice(e.message,'error');}finally{state.busy=false;board();}
@@ -134,16 +136,30 @@ function displayBadges(){
 }
 async function refreshMe(){
  const me=await api('/api/me');state.me=me;
- $('points').textContent=me.points;$('solved').textContent=me.solved;$('skill').textContent=me.skillRating;
+ $('points').textContent=me.points;$('solved').textContent=me.solved;
  $('status').textContent=me.displayName||'Заполни профиль';$('name').value=me.displayName;
- $('publicRank').checked=me.leaderboardOptIn;
+ $('friendsOptIn').checked=me.friendsOptIn;
  $('streak').textContent=me.game.streak;
  const p=me.game.progress;$('levelName').textContent=`Уровень ${me.game.level} · ${me.game.levelName}`;
  $('levelCount').textContent=p.target?`${p.current}/${p.target}`:'Максимальный уровень';
  const pct=p.target?Math.round(p.current/p.target*100):100;
  $('levelFill').style.width=`${pct}%`;
  $('levelBar').setAttribute('aria-valuemax',String(p.target||1));$('levelBar').setAttribute('aria-valuenow',String(p.target?p.current:1));
+ const week=me.school?.weekly;if(week){$('schoolStage').textContent=me.school.name;
+  $('weekMission').textContent=`За 7 дней: ${week.solved}/${week.goal} задач${week.completed?' — цель достигнута!':''}`;
+  $('weeklyFill').style.width=Math.min(100,week.solved/week.goal*100)+'%';
+ }
+ $('sessionCount').textContent=state.sessionDone+'/5';
  displayBadges();
+}
+async function syncCatalog(){
+ try{const catalog=await api('/api/catalog');const counts=Object.fromEntries(catalog.counts.map(c=>[c.category,c.count]));
+  for(const b of document.querySelectorAll('.tab[data-mode]')){
+   if(['mate1','mate2','mate3','draw'].includes(b.dataset.mode)){
+    b.disabled=!counts[b.dataset.mode];b.title=b.disabled?'Этот раздел появится после проверки задач.':'';
+   }
+  }
+ }catch{/* Availability is checked again on the server. */}
 }
 async function newPuzzle(){
  if(state.busy)return;state.busy=true;state.selected=-1;state.lastMove=[];state.hints=0;
@@ -151,10 +167,9 @@ async function newPuzzle(){
  try{
   const params=state.mode==='progressive'?{mode:'progressive'}:{mode:'category',category:state.mode};
   const a=await api('/api/attempts',{method:'POST',body:JSON.stringify(params)});state.attempt=a;
-  $('title').textContent=labels[a.category];
-  $('description').textContent=a.lesson?.prompt||(a.category==='draw'?'Найди доказанную защиту от поражения.':'Найди сильнейшую комбинацию и проверь ответы соперника.');
-  $('difficulty').textContent=a.rating;$('reward').textContent='★ '+(points[a.category]||0);
-  notice('Твой ход! Выбери свою фигуру — увидишь доступные клетки.');
+  $('title').textContent=labels[a.category];$('description').textContent=a.lesson?.prompt||'Найди шах и ответ соперника. Затем выбирай ход.';
+  $('difficulty').textContent=a.rating<650?'Начальный':a.rating<900?'Знакомый':a.rating<1200?'Интересный':'Сложный';$('reward').textContent='★ '+(points[a.category]||0);
+  notice(a.lesson?.prompt||'Твой ход! Выбери свою фигуру — увидишь доступные клетки.');
  }catch(e){state.attempt=null;notice(e.message,'error');$('title').textContent='Задачи пока не загружены';
   $('description').textContent='Эта категория откроется после наполнения проверенными шахматными позициями.';
  }finally{state.busy=false;board();}
@@ -164,32 +179,66 @@ async function hint(){
  state.busy=true;buttonStatus();
  try{const data=await api(`/api/attempts/${state.attempt.id}/hint`,{method:'POST',body:'{}'}),h=data.hint;
   $('hintMessage').hidden=false;$('hintMessage').textContent=h.kind==='piece'?`Посмотри на фигуру ${h.square}.`:`Попробуй ${h.from} → ${h.to}.`;
-  $('reward').textContent='★ '+Math.max(0,(points[state.attempt.category]||0)-1);toast('Подсказка уменьшает награду на один балл');
+  $('reward').textContent='★ '+Math.max(1,(points[state.attempt.category]||0)-1);toast('Подсказка помогает учиться. Хотя бы 1 ★ останется!');
  }catch(e){toast(e.message);}finally{state.busy=false;buttonStatus();}
 }
-async function changeMode(mode){if(state.busy)return;if(mode==='leaderboard'){await openRanking();return;}
- state.mode=mode;for(const el of document.querySelectorAll('.tab'))el.classList.toggle('selected',el.dataset.mode===mode);await newPuzzle();
+async function changeMode(mode){
+ if(state.busy)return;
+ if(mode==='friends'){await openFriends();return;}
+ state.mode=mode;
+ for(const el of document.querySelectorAll('.tab'))el.classList.toggle('selected',el.dataset.mode===mode);
+ await newPuzzle();
 }
-async function openRanking(){
- try{const result=await api('/api/leaderboard');$('rankings').replaceChildren(...result.users.map((u,i)=>{
-  const row=document.createElement('div');row.className='rank-row';const name=document.createElement('span');name.textContent=`${i+1}. ${u.name}`;
-  const score=document.createElement('b');score.textContent=`★ ${u.points}`;row.append(name,score);return row;
- }));if(!result.users.length)$('rankings').textContent='Пока никого нет. В профиле можно включить участие в рейтинге.';
- $('leaderboard').showModal();}catch(e){toast(e.message);}
+const messageNode=(tag,text,cls='')=>{const el=document.createElement(tag);el.textContent=text;if(cls)el.className=cls;return el;};
+async function openFriends(){
+ $('friends').showModal();await refreshFriends();
+}
+async function refreshFriends(){
+ try{
+  const result=await api('/api/friends');
+  $('friendActions').hidden=!result.enabled;
+  $('friendStatus').textContent=result.enabled?'✅ Закрытый круг включён. Показываются только подтверждённые друзья.':'В профиле включи «делиться прогрессом» с разрешения взрослого.';
+  const list=$('friendsList');list.replaceChildren();
+  for(const friend of result.friends){
+   const row=messageNode('div','','friend-row');
+   const description=messageNode('div',`${friend.name} · за неделю ${friend.weeklySolved}/8 задач`);
+   const remove=messageNode('button','Удалить','button outline');remove.type='button';
+   remove.addEventListener('click',async()=>{if(!window.confirm('Убрать друга из отряда?'))return;
+    try{await api('/api/friends/'+friend.id,{method:'DELETE'});await refreshFriends();}catch(e){toast(e.message);}});
+   row.append(description,remove);list.append(row);
+  }
+  if(!result.friends.length)list.append(messageNode('p','Пока друзей нет. Можно пригласить одноклассника лично.'));
+  const requests=$('friendRequests');requests.replaceChildren();
+  for(const request of result.incoming){
+   const row=messageNode('div','','friend-row');row.append(messageNode('span',request.name+' хочет дружить'));
+   for(const [action,label] of [['accept','Принять'],['decline','Отклонить']]){
+    const b=messageNode('button',label,'button '+(action==='accept'?'primary':'outline'));b.type='button';
+    b.addEventListener('click',async()=>{try{await api(`/api/friends/requests/${request.id}/${action}`,{method:'POST',body:'{}'});await refreshFriends();}catch(e){toast(e.message);}});row.append(b);
+   }requests.append(row);
+  }
+  for(const outgoing of result.outgoing)requests.append(messageNode('p',`⏳ Запрос для «${outgoing.name}» ожидает подтверждения.`));
+  if(!result.incoming.length&&!result.outgoing.length)requests.append(messageNode('p','Новых запросов нет.'));
+ }catch(e){$('friendStatus').textContent=e.message;}
 }
 async function begin(){
  try{const config=await api('/api/config');
   if(!state.token){if(tg?.initData){const login=await api('/api/auth/telegram',{method:'POST',body:JSON.stringify({initData:tg.initData})});
    state.token=login.token;sessionStorage.setItem('chess_session',state.token);
   }else{if(config.demo)$('devLogin').hidden=false;$('auth').showModal();return;}}
-  await refreshMe();if(!state.me.displayName){$('profile').showModal();return;}await newPuzzle();
+  await refreshMe();await syncCatalog();if(!state.me.displayName){$('profile').showModal();return;}await newPuzzle();
  }catch(e){sessionStorage.removeItem('chess_session');state.token='';$('authError').textContent=e.message;$('auth').showModal();}
 }
 $('devEnter').addEventListener('click',async()=>{try{const login=await api('/api/auth/dev',{method:'POST',body:JSON.stringify({name:$('devName').value})});
  state.token=login.token;sessionStorage.setItem('chess_session',state.token);$('auth').close();await refreshMe();await newPuzzle();
  }catch(e){$('authError').textContent=e.message;}});
-$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,leaderboardOptIn:$('publicRank').checked})});
+$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,friendsOptIn:$('friendsOptIn').checked})});
  $('profile').close();await refreshMe();if(!state.attempt)await newPuzzle();}catch(e){$('profileError').textContent=e.message;}});
+$('createFriendCode').addEventListener('click',async()=>{try{const d=await api('/api/friends/invitations',{method:'POST',body:'{}'});
+  const code=$('inviteResult');code.hidden=false;code.textContent='Код для друга: '+d.code+' · 48 часов. Передавай только знакомым.';
+  if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(d.code).then(()=>toast('Код скопирован')).catch(()=>{});}
+ }catch(e){toast(e.message);}});
+$('joinFriend').addEventListener('click',async()=>{try{await api('/api/friends/requests',{method:'POST',body:JSON.stringify({code:$('friendCode').value.trim()})});
+ $('friendCode').value='';toast('Запрос отправлен!');await refreshFriends();}catch(e){toast(e.message);}});
 $('profileButton').addEventListener('click',()=>{if(state.me)$('profile').showModal();});
 const openMedals=()=>{if(state.me){displayBadges();$('achievements').showModal();}};
 $('achievementsButton').addEventListener('click',openMedals);$('badgesLink').addEventListener('click',openMedals);
