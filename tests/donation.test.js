@@ -37,7 +37,7 @@ test('thanks dialog shows bank link before QR and instructions, without phone',(
  assert.ok(popup.indexOf('id="donateQrLink"')<popup.indexOf('id="donateQrImage"'));
  assert.ok(popup.indexOf('id="donateQrImage"')<popup.indexOf('id="donateInstructions"'));
  assert.doesNotMatch(popup,/\+7\s*921|donatePhone|donateCopyPhone|donateCopyAll|Номер для перевода/);
- assert.match(popup,/Перевод оформляет взрослый/);
+ assert.match(popup,/перевод оформляет взрослый/i);
  assert.match(popup,/Донат не влияет на доступ/);
  assert.match(js,/No default donation/);
  assert.doesNotMatch(js,/navigator\.clipboard|donateCopyPhone|donateCopyAll/);
