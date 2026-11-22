@@ -2,6 +2,7 @@ import {initDb} from '../src/cloud-db.js';
 import {getCatalog} from '../src/cloud-catalog.js';
 import {authenticateTelegram,currentUser,updateProfile,stats,startAttempt,findAttempt,publicAttempt,submitMove,hint,publicUser} from '../src/cloud-learning.js';
 import {timingSafeEqual} from 'node:crypto';
+import {createLeague,listLeagues,leagueDetails,inviteToLeague,requestLeague,decideLeagueRequest,leaveOrRemoveLeagueMember,closeLeague} from '../src/cloud-leagues.js';
 import {createInvite,requestFriend,respondFriend,removeFriend,friendsSnapshot} from '../src/cloud-friends.js';
 
 function send(res,data,status=200){res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');res.statusCode=status;res.end(JSON.stringify(data));}
@@ -56,6 +57,20 @@ export default async function handler(req,res){
     const friend=path.match(/^\/api\/friends\/([0-9a-f-]{36})$/i);
     if(friend&&method==='DELETE')return send(res,await removeFriend(user,friend[1]));
     if(path.startsWith('/api/friends'))return send(res,{error:'Неизвестная операция с друзьями'},404);
+    if(path==='/api/leagues'&&method==='GET')return send(res,await listLeagues(user));
+    if(path==='/api/leagues'&&method==='POST')return send(res,await createLeague(user,(await payload(req)).name),201);
+    if(path==='/api/leagues/join'&&method==='POST')return send(res,await requestLeague(user,(await payload(req)).code),201);
+    const league=path.match(/^\/api\/leagues\/([0-9a-f-]{36})(?:\/(invites))?$/i);
+    if(league&&method==='GET'&&!league[2])return send(res,await leagueDetails(user,league[1]));
+    if(league&&method==='POST'&&league[2]==='invites')return send(res,await inviteToLeague(user,league[1]),201);
+    if(league&&method==='DELETE'&&!league[2])return send(res,await closeLeague(user,league[1]));
+    const approval=path.match(/^\/api\/leagues\/([0-9a-f-]{36})\/requests\/([0-9a-f-]{36})\/(accept|decline)$/i);
+    if(approval&&method==='POST')
+      return send(res,await decideLeagueRequest(user,approval[1],approval[2],approval[3]==='accept'));
+    const leagueMember=path.match(/^\/api\/leagues\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})$/i);
+    if(leagueMember&&method==='DELETE')
+      return send(res,await leaveOrRemoveLeagueMember(user,leagueMember[1],leagueMember[2]));
+    if(path.startsWith('/api/leagues/'))return send(res,{error:'Неизвестная операция с лигой'},404);
     if(!user.display_name)return send(res,{error:'Сначала укажи имя в профиле'},409);
     if(path==='/api/attempts'&&method==='POST'){
       const p=await payload(req);return send(res,await startAttempt(user,p.mode||'progressive',p.category),201);
@@ -70,7 +85,7 @@ export default async function handler(req,res){
     }
     return send(res,{error:'Not found'},404);
   }catch(e){
-    const client=/^(Invalid|Duplicate|No active|Attempt|Illegal|Puzzle|Все задачи|Категория|Неизвестная|Неверный|Необходимо|Имя|Общий рейтинг|Режим друзей|Аккаунт|Сначала|Приглашение|Список друзей|Сегодня|Вы уже друзья|Запрос|Request too large)/.test(e.message);
+    const client=/^(Invalid|Duplicate|No active|Attempt|Illegal|Puzzle|Все задачи|Категория|Неизвестная|Неверный|Необходимо|Имя|Общий рейтинг|Режим друзей|Аккаунт|Сначала|Приглашение|Список друзей|Сегодня|Вы уже друзья|Запрос|Лига|Приглашение|Только создатель|Для лиги|Название лиги|Можно участвовать|Можно создать|У игрока|Ты уже|Создатель|Заявка|Удалять игроков|Закрыть лигу|Request too large)/.test(e.message);
     if(!client)console.error('Chess Academy cloud request failed:',e.message);
     return send(res,{error:client?e.message:'Server error'},client?400:503);
   }

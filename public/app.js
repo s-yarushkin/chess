@@ -187,6 +187,7 @@ async function hint(){
 async function changeMode(mode){
  if(state.busy)return;
  if(mode==='friends'){await openFriends();return;}
+ if(mode==='leagues'){await openLeagues();return;}
  state.mode=mode;
  for(const el of document.querySelectorAll('.tab'))el.classList.toggle('selected',el.dataset.mode===mode);
  await newPuzzle();
@@ -222,10 +223,92 @@ async function refreshFriends(){
   if(!result.incoming.length&&!result.outgoing.length)requests.append(messageNode('p','Новых запросов нет.'));
  }catch(e){$('friendStatus').textContent=e.message;}
 }
+
+let activeLeagueId=null;
+const leagueActionButton=(label,callback,kind='outline')=>{
+  const b=messageNode('button',label,'button '+kind);
+  b.type='button';
+  b.addEventListener('click',async()=>{try{b.disabled=true;await callback();}catch(e){toast(e.message);}finally{b.disabled=false;}});
+  return b;
+};
+async function openLeagues(){
+  if(!state.me)return;
+  $('leagues').showModal();
+  await refreshLeagues();
+}
+async function refreshLeagues(){
+  const list=$('leagueList');list.replaceChildren();
+  try{
+    const data=await api('/api/leagues');
+    if(!data.enabled){
+      list.append(messageNode('p','Чтобы создать или вступить в лигу, включи обмен прогрессом в профиле.'));
+      $('leagueDetail').hidden=true;
+      return;
+    }
+    if(!data.leagues.length){
+      list.append(messageNode('p','Пока нет лиг. Создай свою или подай заявку по коду друга.'));
+    }
+    for(const item of data.leagues){
+      const row=messageNode('div','','league-row');
+      const info=document.createElement('div');
+      info.append(messageNode('strong',item.name));
+      info.append(messageNode('small',item.memberCount+'/20 участников'+(item.isOwner?' · ты создатель':'')));
+      row.append(info,leagueActionButton('Открыть',()=>showLeague(item.id),'soft'));
+      list.append(row);
+    }
+    if(activeLeagueId && data.leagues.some(l=>l.id===activeLeagueId))await showLeague(activeLeagueId);
+    else {$('leagueDetail').hidden=true;activeLeagueId=null;}
+  }catch(e){list.append(messageNode('p',e.message));}
+}
+async function showLeague(id){
+  const details=await api('/api/leagues/'+encodeURIComponent(id));
+  activeLeagueId=id;
+  $('leagueDetail').hidden=false;
+  $('leagueTitle').textContent=details.name;
+  $('leagueSummary').textContent=details.memberCount+'/20 участников · рейтинг за 7 дней · первые '+details.weeklyLimit+' задач каждого';
+  $('leagueAdmin').hidden=!details.isOwner;
+  $('leagueInvite').hidden=true;
+  const pending=$('leagueRequests');pending.replaceChildren();
+  if(details.isOwner){
+    if(!details.requests.length)pending.append(messageNode('p','Новых заявок нет.'));
+    for(const entry of details.requests){
+      const row=messageNode('div','','league-row');
+      row.append(messageNode('span',entry.name+' просится в лигу'));
+      const actions=document.createElement('div');
+      for(const [action,label,kind] of [['accept','Принять','primary'],['decline','Отклонить','outline']]){
+        actions.append(leagueActionButton(label,async()=>{
+          await api('/api/leagues/'+id+'/requests/'+entry.id+'/'+action,{method:'POST',body:'{}'});
+          await showLeague(id);
+        },kind));
+      }
+      row.append(actions);pending.append(row);
+    }
+  }
+  const members=$('leagueMembers');members.replaceChildren();
+  details.members.forEach((member,index)=>{
+    const row=messageNode('div','','league-row');
+    const info=document.createElement('div');
+    info.append(messageNode('strong',(index+1)+'. '+member.name));
+    info.append(messageNode('small',member.weeklySolved+'/'+details.weeklyLimit+' задач · '+member.weeklyPoints+' ★ за неделю'));
+    row.append(info);
+    if(details.isOwner && member.id!==state.me.id){
+      row.append(leagueActionButton('Убрать',async()=>{
+        if(!window.confirm('Удалить игрока из этой лиги?'))return;
+        await api('/api/leagues/'+id+'/members/'+member.id,{method:'DELETE'});
+        await showLeague(id);
+      }));
+    }
+    members.append(row);
+  });
+  if(!details.members.length)members.append(messageNode('p','Участники временно скрыли прогресс в профиле.'));
+  $('leaveLeague').textContent=details.isOwner?'Закрыть лигу':'Выйти из лиги';
+  $('leaveLeague').dataset.owner=String(details.isOwner);
+}
+
 async function begin(){
  try{const config=await api('/api/config');
   state.features=config;
-  const tab=document.querySelector('.tab[data-mode="friends"]');if(tab)tab.hidden=!config.friendsEnabled;
+  for(const mode of ['friends','leagues']){const tab=document.querySelector('.tab[data-mode="'+mode+'"]');if(tab)tab.hidden=!config.friendsEnabled;}
   const label=$('friendsOptIn').closest('label');if(label)label.hidden=!config.friendsEnabled;
   if(!state.token){if(tg?.initData){const login=await api('/api/auth/telegram',{method:'POST',body:JSON.stringify({initData:tg.initData})});
    state.token=login.token;sessionStorage.setItem('chess_session',state.token);
@@ -244,6 +327,43 @@ $('createFriendCode').addEventListener('click',async()=>{try{const d=await api('
  }catch(e){toast(e.message);}});
 $('joinFriend').addEventListener('click',async()=>{try{await api('/api/friends/requests',{method:'POST',body:JSON.stringify({code:$('friendCode').value.trim()})});
  $('friendCode').value='';toast('Запрос отправлен!');await refreshFriends();}catch(e){toast(e.message);}});
+
+$('createLeague').addEventListener('click',async()=>{
+  try{
+    const name=$('leagueName').value.trim();
+    const data=await api('/api/leagues',{method:'POST',body:JSON.stringify({name})});
+    $('leagueName').value='';toast('Лига создана!');
+    activeLeagueId=data.id;
+    await refreshLeagues();
+  }catch(e){toast(e.message);}
+});
+$('joinLeague').addEventListener('click',async()=>{
+  try{
+    const code=$('leagueCode').value.trim();
+    const data=await api('/api/leagues/join',{method:'POST',body:JSON.stringify({code})});
+    $('leagueCode').value='';toast('Заявка отправлена в лигу «'+data.leagueName+'»');
+  }catch(e){toast(e.message);}
+});
+$('createLeagueCode').addEventListener('click',async()=>{
+  if(!activeLeagueId)return;
+  try{
+    const invite=await api('/api/leagues/'+activeLeagueId+'/invites',{method:'POST',body:'{}'});
+    const output=$('leagueInvite');output.hidden=false;
+    output.textContent='Код лиги: '+invite.code+' · действителен 7 дней. Отправь знакомым, заявки ты подтверждаешь.';
+    if(navigator.clipboard?.writeText)navigator.clipboard.writeText(invite.code).catch(()=>{});
+  }catch(e){toast(e.message);}
+});
+$('leaveLeague').addEventListener('click',async()=>{
+  if(!activeLeagueId||!state.me)return;
+  const owner=$('leaveLeague').dataset.owner==='true';
+  if(!window.confirm(owner?'Закрыть лигу и удалить все заявки и участников?':'Выйти из лиги?'))return;
+  try{
+    const path='/api/leagues/'+activeLeagueId+(owner?'':'/members/'+state.me.id);
+    await api(path,{method:'DELETE'});activeLeagueId=null;toast(owner?'Лига закрыта':'Ты вышел из лиги');
+    await refreshLeagues();
+  }catch(e){toast(e.message);}
+});
+
 $('profileButton').addEventListener('click',()=>{if(state.me)$('profile').showModal();});
 const openMedals=()=>{if(state.me){displayBadges();$('achievements').showModal();}};
 $('achievementsButton').addEventListener('click',openMedals);$('badgesLink').addEventListener('click',openMedals);
