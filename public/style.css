@@ -163,3 +163,22 @@
 }
 .team.white {background:#ffffff;color:#102631;border:1.5px solid #102631;}
 .team.black {background:#102631;color:#ffffff;border:1.5px solid #f5f1e7;}
+
+
+/* Private leagues: concise cards in a scrollable, accessible dialog. */
+.league-dialog{width:min(620px,calc(100vw - 20px));max-height:min(90dvh,850px);overflow-y:auto;}
+.league-dialog h3{font-size:15px;margin:15px 0 7px;}
+.league-actions{background:#f2f8f2;padding:10px;border-radius:12px;}
+.league-actions label{margin:7px 0 5px;font-size:12px;}
+.league-actions .code-row input{min-width:0;flex:1;}
+.league-actions .button,.league-detail .button{width:auto;margin:0;}
+.league-row{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#f5f8f2;border-radius:10px;padding:10px;margin:5px 0;}
+.league-row strong{font-size:13px;}
+.league-row small{display:block;color:var(--muted);font-size:11px;}
+.league-row .button{min-height:35px;font-size:12px;padding:7px 9px;flex:none;}
+.league-detail{border-top:1px solid #d4e4db;margin-top:12px;padding-top:7px;}
+.league-detail #leagueSummary{font-size:12px;}
+.league-detail #leagueAdmin{padding:8px;background:#fff9e9;border-radius:9px;}
+.league-detail #leagueInvite{margin:8px 0;overflow-wrap:anywhere;}
+.league-detail #leaveLeague{margin-top:14px;background:#e9f1ee;}
+@media(max-width:400px){.league-dialog{padding:14px}.league-actions .code-row{flex-wrap:wrap}.league-actions .code-row .button{width:100%}.league-row{flex-wrap:wrap}}

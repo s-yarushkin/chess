@@ -47,6 +47,26 @@ export async function initDb(){
     await db.query('CREATE INDEX IF NOT EXISTS idx_friend_requests_recipient ON friend_requests(recipient_id,status,created_at DESC)');
     await db.query('CREATE INDEX IF NOT EXISTS idx_friend_requests_sender ON friend_requests(requester_id,status,created_at DESC)');
     await db.query('CREATE INDEX IF NOT EXISTS idx_friendships_reverse ON friendships(user_b)');
+    await db.query("CREATE TABLE IF NOT EXISTS leagues ("+
+      "id UUID PRIMARY KEY,name TEXT NOT NULL,owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,"+
+      "created_at BIGINT NOT NULL,active BOOLEAN NOT NULL DEFAULT TRUE)");
+    await db.query("CREATE TABLE IF NOT EXISTS league_members ("+
+      "league_id UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,"+
+      "user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,"+
+      "role TEXT NOT NULL CHECK(role IN ('owner','member')),joined_at BIGINT NOT NULL,"+
+      "PRIMARY KEY(league_id,user_id))");
+    await db.query("CREATE TABLE IF NOT EXISTS league_invites ("+
+      "id UUID PRIMARY KEY,league_id UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,"+
+      "code_hash TEXT NOT NULL UNIQUE,created_at BIGINT NOT NULL,expires_at BIGINT NOT NULL,"+
+      "uses INTEGER NOT NULL DEFAULT 0,max_uses INTEGER NOT NULL DEFAULT 20)");
+    await db.query("CREATE TABLE IF NOT EXISTS league_requests ("+
+      "id UUID PRIMARY KEY,league_id UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,"+
+      "user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,"+
+      "status TEXT NOT NULL CHECK(status IN ('pending','approved','rejected')),"+
+      "created_at BIGINT NOT NULL,decided_at BIGINT,UNIQUE(league_id,user_id))");
+    await db.query('CREATE INDEX IF NOT EXISTS idx_league_members_user ON league_members(user_id)');
+    await db.query('CREATE INDEX IF NOT EXISTS idx_league_invites_recent ON league_invites(league_id,created_at DESC)');
+    await db.query('CREATE INDEX IF NOT EXISTS idx_league_requests_pending ON league_requests(league_id,status,created_at)');
     await db.query('CREATE INDEX IF NOT EXISTS idx_attempts_active ON attempts(user_id,status,started_at)');
     await db.query('CREATE INDEX IF NOT EXISTS idx_completions_recent_pg ON completions(user_id,solved_at DESC)');
     return db;
