@@ -39,6 +39,11 @@ test('thanks dialog shows bank link before QR and instructions, without phone',(
  assert.doesNotMatch(popup,/\+7\s*921|donatePhone|donateCopyPhone|donateCopyAll|Номер для перевода/);
  assert.match(popup,/перевод оформляет взрослый/i);
  assert.match(popup,/Донат не влияет на доступ/);
+ assert.match(popup,/Перевести через СБП/);
+ assert.match(popup,/выбери свой банк/);
+ assert.match(popup,/Сбер, Т-Банк, ВТБ и другие/);
+ assert.doesNotMatch(popup,/Открыть Ozon Банк/);
+ assert.match(js,/введи эту сумму в банке/);
  assert.match(js,/No default donation/);
  assert.doesNotMatch(js,/navigator\.clipboard|donateCopyPhone|donateCopyAll/);
  assert.match(css,/#donateQrReady\[hidden\]/);
