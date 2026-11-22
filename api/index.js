@@ -2,6 +2,7 @@ import {initDb} from '../src/cloud-db.js';
 import {getCatalog} from '../src/cloud-catalog.js';
 import {authenticateTelegram,currentUser,updateProfile,stats,startAttempt,findAttempt,publicAttempt,submitMove,hint,publicUser} from '../src/cloud-learning.js';
 import {timingSafeEqual} from 'node:crypto';
+import {createInvite,requestFriend,respondFriend,removeFriend,friendsSnapshot} from '../src/cloud-friends.js';
 
 function send(res,data,status=200){res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');res.statusCode=status;res.end(JSON.stringify(data));}
 function matches(a,b){const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y);}
@@ -22,7 +23,7 @@ export default async function handler(req,res){
   const path=route==='healthz'?'/healthz':route==='webhook'?'/telegram/webhook':route?'/api/'+route:parsed.pathname;
   const method=req.method;
   try{
-    if(path==='/api/config'&&method==='GET')return send(res,{demo:false,botConfigured:!!process.env.TG_BOT_TOKEN,leaderboardOptIn:false,privateFriends:true,friendsEnabled:false,publicAccess:true});
+    if(path==='/api/config'&&method==='GET')return send(res,{demo:false,botConfigured:!!process.env.TG_BOT_TOKEN,leaderboardOptIn:false,privateFriends:true,friendsEnabled:true,publicAccess:true});
     if(path==='/healthz'&&method==='GET'){
       await initDb();const catalog=getCatalog();return send(res,{status:'ok',database:'connected',catalog:catalog.counts,publicAccess:true});
     }
@@ -45,8 +46,16 @@ export default async function handler(req,res){
       const u=await updateProfile(user,await payload(req));return send(res,{...publicUser(u),...await stats(u)});
     }
     if(path==='/api/leaderboard'&&method==='GET')return send(res,{users:[],private:true});
-    if(path==='/api/friends'&&method==='GET')return send(res,{enabled:false,friends:[],incoming:[],outgoing:[],privacy:'Функция друзей пока не подключена.'});
-    if(path.startsWith('/api/friends'))return send(res,{error:'Функция друзей пока не подключена'},403);
+    if(path==='/api/friends'&&method==='GET')return send(res,await friendsSnapshot(user));
+    if(path==='/api/friends/invitations'&&method==='POST')return send(res,await createInvite(user),201);
+    if(path==='/api/friends/requests'&&method==='POST'){
+      const data=await payload(req);return send(res,await requestFriend(user,data.code),201);
+    }
+    const action=path.match(/^\/api\/friends\/requests\/([0-9a-f-]{36})\/(accept|decline)$/i);
+    if(action&&method==='POST')return send(res,await respondFriend(user,action[1],action[2]==='accept'));
+    const friend=path.match(/^\/api\/friends\/([0-9a-f-]{36})$/i);
+    if(friend&&method==='DELETE')return send(res,await removeFriend(user,friend[1]));
+    if(path.startsWith('/api/friends'))return send(res,{error:'Неизвестная операция с друзьями'},404);
     if(!user.display_name)return send(res,{error:'Сначала укажи имя в профиле'},409);
     if(path==='/api/attempts'&&method==='POST'){
       const p=await payload(req);return send(res,await startAttempt(user,p.mode||'progressive',p.category),201);
@@ -61,7 +70,7 @@ export default async function handler(req,res){
     }
     return send(res,{error:'Not found'},404);
   }catch(e){
-    const client=/^(Invalid|Duplicate|No active|Attempt|Illegal|Puzzle|Все задачи|Категория|Неизвестная|Необходимо|Имя|Общий рейтинг|Режим друзей|Аккаунт|Сначала|Request too large)/.test(e.message);
+    const client=/^(Invalid|Duplicate|No active|Attempt|Illegal|Puzzle|Все задачи|Категория|Неизвестная|Неверный|Необходимо|Имя|Общий рейтинг|Режим друзей|Аккаунт|Сначала|Приглашение|Список друзей|Сегодня|Вы уже друзья|Запрос|Request too large)/.test(e.message);
     if(!client)console.error('Chess Academy cloud request failed:',e.message);
     return send(res,{error:client?e.message:'Server error'},client?400:503);
   }

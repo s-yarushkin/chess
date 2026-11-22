@@ -199,7 +199,7 @@ async function refreshFriends(){
  try{
   const result=await api('/api/friends');
   $('friendActions').hidden=!result.enabled;
-  $('friendStatus').textContent=result.enabled?'✅ Закрытый круг включён. Показываются только подтверждённые друзья.':'Друзья пока не подключены. Здесь позже появится возможность играть вместе.';
+  $('friendStatus').textContent=result.enabled?'✅ Закрытый круг включён. Показываются только подтверждённые друзья.':'Обмен выключен. Включи его в профиле, чтобы добавлять друзей.';
   const list=$('friendsList');list.replaceChildren();
   for(const friend of result.friends){
    const row=messageNode('div','','friend-row');
