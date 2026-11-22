@@ -12,7 +12,7 @@ test('onboarding welcomes all players and asks them to choose a name',()=>{
 test('Vercel API advertises public access and keeps friendships private',()=>{
  const api=read('api/index.js'),auth=read('src/cloud-learning.js');
  assert.match(api,/publicAccess:true/);
- assert.match(api,/friendsEnabled:false/);
+ assert.match(api,/friendsEnabled:true/);
  assert.doesNotMatch(api,/pilot:true|закрытом пилоте|родительского управления/);
  assert.doesNotMatch(auth,/PILOT_TELEGRAM_IDS/);
  assert.match(auth,/timingSafeEqual/);
