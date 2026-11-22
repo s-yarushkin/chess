@@ -4,6 +4,7 @@ import {authenticateTelegram,currentUser,updateProfile,stats,startAttempt,findAt
 import {timingSafeEqual} from 'node:crypto';
 import {createLeague,listLeagues,leagueDetails,inviteToLeague,requestLeague,decideLeagueRequest,leaveOrRemoveLeagueMember,closeLeague} from '../src/cloud-leagues.js';
 import {createInvite,requestFriend,respondFriend,removeFriend,friendsSnapshot} from '../src/cloud-friends.js';
+import {getDonationInfo,getDonationQr} from '../src/donation-api.js';
 
 function send(res,data,status=200){res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');res.statusCode=status;res.end(JSON.stringify(data));}
 function matches(a,b){const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y);}
@@ -24,6 +25,13 @@ export default async function handler(req,res){
   const path=route==='healthz'?'/healthz':route==='webhook'?'/telegram/webhook':route?'/api/'+route:parsed.pathname;
   const method=req.method;
   try{
+    if(path==='/api/donation'&&method==='GET'){
+      const raw=process.env.DONATION_OZON_URL||'';
+      const data=getDonationInfo(raw);
+      return send(res,{...data,
+        qrDataUrl:data.qrAvailable?await getDonationQr(raw):null,
+        paymentUrl:data.qrAvailable?raw:null});
+    }
     if(path==='/api/config'&&method==='GET')return send(res,{demo:false,botConfigured:!!process.env.TG_BOT_TOKEN,leaderboardOptIn:false,privateFriends:true,friendsEnabled:true,publicAccess:true});
     if(path==='/healthz'&&method==='GET'){
       await initDb();const catalog=getCatalog();return send(res,{status:'ok',database:'connected',catalog:catalog.counts,publicAccess:true});

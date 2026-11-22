@@ -6,12 +6,13 @@
 <title>Шахматная академия</title><link rel="stylesheet" href="/style.css">
 <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
 <script src="/viewport.js" defer></script>
+<script src="/donate.js" defer></script>
 <script type="module" src="/app.js" defer></script>
 </head>
 <body>
 <div class="app" id="app">
   <header class="top">
-    <div class="brand"><span class="brand-icon">♞</span><div><strong>ШАХМАТНАЯ АКАДЕМИЯ</strong><small id="headline">Тренируйся. Побеждай. Расти.</small></div></div>
+    <div class="brand"><span class="brand-icon">♞</span><div class="brand-copy"><strong>ШАХМАТНАЯ АКАДЕМИЯ</strong><small id="headline">Тренируйся. Побеждай. Расти.</small></div><button type="button" class="donate-launch" id="donateOpen" aria-haspopup="dialog" aria-controls="donateDialog" title="Сказать спасибо создателям">💛 <span class="donate-full">Сказать спасибо</span><span class="donate-short">Спасибо</span></button></div>
     <div class="score" title="Очки и решённые задачи"><span>★ <b id="points">0</b></span><small><b id="solved">0</b> решено</small></div>
     <div class="combo" title="Безошибочных задач подряд">⚡ <b id="streak">0</b><small>серия</small></div>
     <button class="icon-btn" id="achievementsButton" aria-label="Мои награды" title="Мои награды">🏅</button>
@@ -82,6 +83,46 @@
     </div>
     <small>Нет публичного поиска лиг, чатов и данных о школе. Присоединение только по коду и после одобрения создателем. Лимит — 20 участников.</small>
   </form></dialog>
+  <dialog id="donateDialog" class="dialog donate-dialog" aria-labelledby="donateHeading">
+    <form method="dialog"><button class="close" aria-label="Закрыть">×</button></form>
+    <h2 id="donateHeading">💛 Сказать спасибо</h2>
+    <p class="donate-quote">«Лёша, делай дальше бесплатные крутые продукты!»</p>
+    <p>Поддержка добровольная, а игра всегда бесплатная. Перевод оформляет взрослый.</p>
+    <fieldset class="donate-fieldset">
+      <legend>Выбери сумму благодарности</legend>
+      <div class="donate-options" role="group" aria-label="Сумма благодарности">
+        <button type="button" class="donate-choice" data-amount="30" aria-pressed="false">30 ₽</button>
+        <button type="button" class="donate-choice" data-amount="50" aria-pressed="false">50 ₽</button>
+        <button type="button" class="donate-choice" data-amount="100" aria-pressed="false">100 ₽</button>
+        <button type="button" class="donate-choice" data-amount="custom" aria-pressed="false">Своя сумма</button>
+      </div>
+      <label for="donateCustomAmount" class="donate-custom-label" id="donateCustomWrap" hidden>Своя сумма, от 10 до 10 000 ₽
+        <input type="number" id="donateCustomAmount" min="10" max="10000" step="1" inputmode="numeric" placeholder="Например, 70">
+      </label>
+    </fieldset>
+    <div class="donate-summary" id="donateSummary" role="status" aria-live="polite">Выбери сумму для перевода</div>
+    <section class="donate-transfer" aria-label="Перевод по СБП">
+      <strong>Перевод через СБП</strong>
+      <div class="donate-details"><span>Банк получателя</span><b>Ozon Банк</b></div>
+      <div class="donate-details"><span>Номер для перевода</span><b id="donatePhone">+7 921 128-28-45</b></div>
+      <div class="donate-copy-row">
+        <button type="button" class="button soft" id="donateCopyPhone">Скопировать номер</button>
+        <button type="button" class="button outline" id="donateCopyAll">Скопировать реквизиты</button>
+      </div>
+      <p>Открой приложение своего банка → перевод по СБП → вставь телефон → выбери <b>Ozon Банк</b> и сумму. Перед подтверждением проверь получателя и комиссию.</p>
+    </section>
+    <section class="donate-qr-panel" aria-label="QR-код банковского перевода">
+      <strong>QR-код Ozon Банка</strong>
+      <div id="donateQrReady" hidden>
+        <img id="donateQrImage" alt="QR-код официальной банковской страницы благодарности" width="200" height="200">
+        <a id="donateQrLink" class="button primary donate-pay-link" href="#" target="_blank" rel="noopener noreferrer">Открыть банковскую ссылку</a>
+        <p>Сумма из игры может не переноситься автоматически. Проверь её перед переводом.</p>
+      </div>
+      <p id="donateQrPending">QR появится после подключения официальной ссылки из Ozon Банка. Сейчас доступен перевод по номеру выше.</p>
+    </section>
+    <p class="donate-note">Благодарность не влияет на доступ к задачам, награды или рейтинг.</p>
+    <p id="donateMessage" role="status" aria-live="polite"></p>
+  </dialog>
   <dialog id="achievements" class="dialog medals-dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>Мои достижения</h2><p>Награды за настоящие решения. Никаких ежедневных обязательств!</p><div id="medals" class="medals"></div><div class="medals-note">⚡ Серия растёт только за новые задачи, решённые без ошибок и подсказок. За пропуск серия обнуляется.</div></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
