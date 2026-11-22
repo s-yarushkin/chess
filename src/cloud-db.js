@@ -28,6 +28,25 @@ export async function initDb(){
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,puzzle_id TEXT NOT NULL,
       category TEXT NOT NULL,points INTEGER NOT NULL,solved_at BIGINT NOT NULL,
       PRIMARY KEY (user_id,puzzle_id))`);
+    await db.query(`CREATE TABLE IF NOT EXISTS friend_invites (
+      id UUID PRIMARY KEY, owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      code_hash TEXT NOT NULL UNIQUE, created_at BIGINT NOT NULL,
+      expires_at BIGINT NOT NULL, used_at BIGINT)`);
+    await db.query(`CREATE TABLE IF NOT EXISTS friend_requests (
+      id UUID PRIMARY KEY, requester_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status TEXT NOT NULL CHECK(status IN ('pending','accepted','rejected')),
+      created_at BIGINT NOT NULL, responded_at BIGINT,
+      CHECK(requester_id<>recipient_id))`);
+    await db.query(`CREATE TABLE IF NOT EXISTS friendships (
+      user_a UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      user_b UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at BIGINT NOT NULL, PRIMARY KEY(user_a,user_b),
+      CHECK(user_a<>user_b))`);
+    await db.query('CREATE INDEX IF NOT EXISTS idx_friend_invites_owner ON friend_invites(owner_id,created_at DESC)');
+    await db.query('CREATE INDEX IF NOT EXISTS idx_friend_requests_recipient ON friend_requests(recipient_id,status,created_at DESC)');
+    await db.query('CREATE INDEX IF NOT EXISTS idx_friend_requests_sender ON friend_requests(requester_id,status,created_at DESC)');
+    await db.query('CREATE INDEX IF NOT EXISTS idx_friendships_reverse ON friendships(user_b)');
     await db.query('CREATE INDEX IF NOT EXISTS idx_attempts_active ON attempts(user_id,status,started_at)');
     await db.query('CREATE INDEX IF NOT EXISTS idx_completions_recent_pg ON completions(user_id,solved_at DESC)');
     return db;

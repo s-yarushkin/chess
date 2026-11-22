@@ -20,7 +20,7 @@ export function verifyTelegram(raw,token,now=Math.floor(Date.now()/1000)){
   return {telegramId:String(u.id),suggestedName:String(u.first_name||'').slice(0,50)};
 }
 export function validName(s){return typeof s==='string'&&s.trim().length>=2&&s.trim().length<=30&&!/[<>\x00-\x1f]/.test(s);}
-export const publicUser=u=>({id:u.id,displayName:u.display_name,leaderboardOptIn:false,friendsOptIn:false,points:u.points,solved:u.solved_count,skillRating:u.skill_rating});
+export const publicUser=u=>({id:u.id,displayName:u.display_name,leaderboardOptIn:false,friendsOptIn:!!u.friends_opt_in,points:u.points,solved:u.solved_count,skillRating:u.skill_rating});
 export async function authenticateTelegram(raw){
   const {telegramId,suggestedName}=verifyTelegram(raw,process.env.TG_BOT_TOKEN);
   const now=Date.now(),userId=randomUUID();
@@ -38,10 +38,11 @@ export async function currentUser(bearer){
 }
 export async function updateProfile(user,body){
   if(body.displayName!==undefined && !validName(body.displayName))throw Error('Имя от 2 до 30 символов');
-  if(body.friendsOptIn===true)throw Error('Функция друзей пока не подключена');
+  if(body.friendsOptIn!==undefined && typeof body.friendsOptIn!=='boolean')throw Error('Неверное значение настройки друзей');
   if(body.leaderboardOptIn===true)throw Error('Общий рейтинг отключён');
   const name=body.displayName===undefined?user.display_name:body.displayName.trim();
-  const r=await getPool().query('UPDATE users SET display_name=$1,friends_opt_in=FALSE,leaderboard_opt_in=FALSE WHERE id=$2 RETURNING *',[name,user.id]);return r.rows[0];
+  const sharing=body.friendsOptIn===undefined?!!user.friends_opt_in:body.friendsOptIn;
+  const r=await getPool().query('UPDATE users SET display_name=$1,friends_opt_in=$2,leaderboard_opt_in=FALSE WHERE id=$3 RETURNING *',[name,sharing,user.id]);return r.rows[0];
 }
 export async function stats(user){
   const r=await getPool().query(`SELECT category,COUNT(*)::int AS n FROM completions WHERE user_id=$1 GROUP BY category`,[user.id]);
