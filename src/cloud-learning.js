@@ -16,9 +16,7 @@ export function verifyTelegram(raw,token,now=Math.floor(Date.now()/1000)){
   if(!timingSafeEqual(actual,Buffer.from(hash,'hex')))throw Error('Invalid authentication');
   let u;try{u=JSON.parse(params.get('user')||'null');}catch{throw Error('Invalid user');}
   if(!u||!Number.isSafeInteger(u.id)||u.id<=0)throw Error('Invalid user');
-  // A closed pilot must not silently become public when the allowlist is unset.
-  const allowed=(process.env.PILOT_TELEGRAM_IDS||'').split(',').map(s=>s.trim()).filter(Boolean);
-  if(!allowed.includes(String(u.id)))throw Error('Аккаунт не включён в закрытый пилот. Ваш Telegram ID: '+u.id);
+  // Public sign-in: verify Telegram signature and freshness, but do not restrict account IDs.
   return {telegramId:String(u.id),suggestedName:String(u.first_name||'').slice(0,50)};
 }
 export function validName(s){return typeof s==='string'&&s.trim().length>=2&&s.trim().length<=30&&!/[<>\x00-\x1f]/.test(s);}
@@ -40,7 +38,7 @@ export async function currentUser(bearer){
 }
 export async function updateProfile(user,body){
   if(body.displayName!==undefined && !validName(body.displayName))throw Error('Имя от 2 до 30 символов');
-  if(body.friendsOptIn===true)throw Error('Режим друзей недоступен в закрытом пилоте');
+  if(body.friendsOptIn===true)throw Error('Функция друзей пока не подключена');
   if(body.leaderboardOptIn===true)throw Error('Общий рейтинг отключён');
   const name=body.displayName===undefined?user.display_name:body.displayName.trim();
   const r=await getPool().query('UPDATE users SET display_name=$1,friends_opt_in=FALSE,leaderboard_opt_in=FALSE WHERE id=$2 RETURNING *',[name,user.id]);return r.rows[0];

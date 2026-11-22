@@ -22,9 +22,9 @@ export default async function handler(req,res){
   const path=route==='healthz'?'/healthz':route==='webhook'?'/telegram/webhook':route?'/api/'+route:parsed.pathname;
   const method=req.method;
   try{
-    if(path==='/api/config'&&method==='GET')return send(res,{demo:false,botConfigured:!!process.env.TG_BOT_TOKEN,leaderboardOptIn:false,privateFriends:true,pilot:true});
+    if(path==='/api/config'&&method==='GET')return send(res,{demo:false,botConfigured:!!process.env.TG_BOT_TOKEN,leaderboardOptIn:false,privateFriends:true,friendsEnabled:false,publicAccess:true});
     if(path==='/healthz'&&method==='GET'){
-      await initDb();const catalog=getCatalog();return send(res,{status:'ok',database:'connected',catalog:catalog.counts,pilot:true});
+      await initDb();const catalog=getCatalog();return send(res,{status:'ok',database:'connected',catalog:catalog.counts,publicAccess:true});
     }
     if(path==='/telegram/webhook'&&method==='POST'){
       if(!process.env.TG_WEBHOOK_SECRET||!matches(req.headers['x-telegram-bot-api-secret-token'],process.env.TG_WEBHOOK_SECRET))return send(res,{error:'Forbidden'},403);
@@ -45,8 +45,8 @@ export default async function handler(req,res){
       const u=await updateProfile(user,await payload(req));return send(res,{...publicUser(u),...await stats(u)});
     }
     if(path==='/api/leaderboard'&&method==='GET')return send(res,{users:[],private:true});
-    if(path==='/api/friends'&&method==='GET')return send(res,{enabled:false,friends:[],incoming:[],outgoing:[],privacy:'Недоступно в закрытом пилоте.'});
-    if(path.startsWith('/api/friends'))return send(res,{error:'Друзья будут доступны после родительского управления'},403);
+    if(path==='/api/friends'&&method==='GET')return send(res,{enabled:false,friends:[],incoming:[],outgoing:[],privacy:'Функция друзей пока не подключена.'});
+    if(path.startsWith('/api/friends'))return send(res,{error:'Функция друзей пока не подключена'},403);
     if(!user.display_name)return send(res,{error:'Сначала укажи имя в профиле'},409);
     if(path==='/api/attempts'&&method==='POST'){
       const p=await payload(req);return send(res,await startAttempt(user,p.mode||'progressive',p.category),201);
