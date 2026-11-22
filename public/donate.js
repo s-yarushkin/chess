@@ -14,7 +14,7 @@
  }
  function render(){
   const n=amount();
-  $('donateSummary').textContent=n?'Выбранная сумма: '+format(n):'Выбери сумму для перевода';
+  $('donateSummary').textContent=n?'Выбрано '+format(n)+' — введи эту сумму в банке':'Выбери сумму для перевода';
  }
  function choose(kind){
   custom=kind==='custom';
