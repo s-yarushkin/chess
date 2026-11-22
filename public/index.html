@@ -87,9 +87,9 @@
     <form method="dialog"><button class="close" aria-label="Закрыть">×</button></form>
     <h2 id="donateHeading">💛 Сказать спасибо</h2>
     <p class="donate-quote">«Лёша, делай дальше бесплатные крутые продукты!»</p>
-    <p>Поддержка добровольная, а игра всегда бесплатная. Перевод оформляет взрослый.</p>
+    <p class="donate-intro">Игра бесплатная. Благодарность добровольная, перевод оформляет взрослый.</p>
     <fieldset class="donate-fieldset">
-      <legend>Выбери сумму благодарности</legend>
+      <legend>Выбери сумму</legend>
       <div class="donate-options" role="group" aria-label="Сумма благодарности">
         <button type="button" class="donate-choice" data-amount="30" aria-pressed="false">30 ₽</button>
         <button type="button" class="donate-choice" data-amount="50" aria-pressed="false">50 ₽</button>
@@ -101,29 +101,23 @@
       </label>
     </fieldset>
     <div class="donate-summary" id="donateSummary" role="status" aria-live="polite">Выбери сумму для перевода</div>
-    <section class="donate-transfer" aria-label="Перевод по СБП">
-      <strong>Перевод через СБП</strong>
-      <div class="donate-details"><span>Банк получателя</span><b>Ozon Банк</b></div>
-      <div class="donate-details"><span>Номер для перевода</span><b id="donatePhone">+7 921 128-28-45</b></div>
-      <div class="donate-copy-row">
-        <button type="button" class="button soft" id="donateCopyPhone">Скопировать номер</button>
-        <button type="button" class="button outline" id="donateCopyAll">Скопировать реквизиты</button>
-      </div>
-      <p>Открой приложение своего банка → перевод по СБП → вставь телефон → выбери <b>Ozon Банк</b> и сумму. Перед подтверждением проверь получателя и комиссию.</p>
-    </section>
-    <section class="donate-qr-panel" aria-label="QR-код банковского перевода">
-      <strong>QR-код Ozon Банка</strong>
+    <section class="donate-primary" aria-label="Поддержать через Ozon Банк">
       <div id="donateQrReady" hidden>
-        <img id="donateQrImage" alt="QR-код официальной банковской страницы благодарности" width="200" height="200">
-        <a id="donateQrLink" class="button primary donate-pay-link" href="#" target="_blank" rel="noopener noreferrer">Открыть банковскую ссылку</a>
-        <p>Сумма из игры может не переноситься автоматически. Проверь её перед переводом.</p>
+        <a id="donateQrLink" class="donate-bank-button" href="#" target="_blank" rel="noopener noreferrer">Открыть Ozon Банк <span aria-hidden="true">↗</span></a>
+        <figure class="donate-qr-figure">
+          <img id="donateQrImage" alt="Платёжный QR-код Ozon Банка" width="180" height="180">
+          <figcaption>Или отсканируй QR с другого устройства</figcaption>
+        </figure>
       </div>
-      <p id="donateQrPending">QR появится после подключения официальной ссылки из Ozon Банка. Сейчас доступен перевод по номеру выше.</p>
+      <p id="donateQrPending" role="status">Загружаем ссылку и QR Ozon Банка…</p>
     </section>
-    <p class="donate-note">Благодарность не влияет на доступ к задачам, награды или рейтинг.</p>
-    <p id="donateMessage" role="status" aria-live="polite"></p>
+    <div id="donateInstructions" class="donate-instructions">
+      <strong>Как перевести</strong>
+      <p>Нажми кнопку банка или отсканируй QR. В открывшемся банковском приложении введи выбранную сумму и проверь получателя перед подтверждением.</p>
+    </div>
+    <p class="donate-note">Донат не влияет на доступ к заданиям, награды и рейтинг.</p>
   </dialog>
-  <dialog id="achievements" class="dialog medals-dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>Мои достижения</h2><p>Награды за настоящие решения. Никаких ежедневных обязательств!</p><div id="medals" class="medals"></div><div class="medals-note">⚡ Серия растёт только за новые задачи, решённые без ошибок и подсказок. За пропуск серия обнуляется.</div></form></dialog>
+    <dialog id="achievements" class="dialog medals-dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>Мои достижения</h2><p>Награды за настоящие решения. Никаких ежедневных обязательств!</p><div id="medals" class="medals"></div><div class="medals-note">⚡ Серия растёт только за новые задачи, решённые без ошибок и подсказок. За пропуск серия обнуляется.</div></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
 </body></html>
