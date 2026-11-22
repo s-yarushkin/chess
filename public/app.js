@@ -138,6 +138,7 @@ async function refreshMe(){
  const me=await api('/api/me');state.me=me;
  $('points').textContent=me.points;$('solved').textContent=me.solved;
  $('status').textContent=me.displayName||'Заполни профиль';$('name').value=me.displayName;
+ $('firstTimeWelcome').hidden=!!me.displayName;
  $('friendsOptIn').checked=me.friendsOptIn;
  $('friendsOptIn').disabled=!state.features.friendsEnabled;
  $('streak').textContent=me.game.streak;
@@ -198,7 +199,7 @@ async function refreshFriends(){
  try{
   const result=await api('/api/friends');
   $('friendActions').hidden=!result.enabled;
-  $('friendStatus').textContent=result.enabled?'✅ Закрытый круг включён. Показываются только подтверждённые друзья.':'В профиле включи «делиться прогрессом» с разрешения взрослого.';
+  $('friendStatus').textContent=result.enabled?'✅ Закрытый круг включён. Показываются только подтверждённые друзья.':'Друзья пока не подключены. Здесь позже появится возможность играть вместе.';
   const list=$('friendsList');list.replaceChildren();
   for(const friend of result.friends){
    const row=messageNode('div','','friend-row');
