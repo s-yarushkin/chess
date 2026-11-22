@@ -143,3 +143,23 @@
   .app {min-height:100dvh;height:auto;overflow:visible;}
   .game-layout {min-height:500px;}
 }
+
+
+/* v0.8 — Make White visually white, without the dark glyph swallowing its face.
+   Text glyphs are monochrome 'black' chess silhouettes; the thin stroke preserves shape. */
+.piece.white {
+  color:#ffffff;
+  -webkit-text-fill-color:#ffffff;
+  -webkit-text-stroke:0.65px #16313c;
+  text-shadow:0 0 1px #ffffff,0 0 3px #ffffff,0 2px 2px #24374270;
+  filter:drop-shadow(0 1px 1px #0004);
+}
+.piece.black {
+  color:#102631;
+  -webkit-text-fill-color:#102631;
+  -webkit-text-stroke:0.2px #142b35;
+  text-shadow:0 1px 1px #ffffff70;
+  filter:drop-shadow(0 1px 1px #0005);
+}
+.team.white {background:#ffffff;color:#102631;border:1.5px solid #102631;}
+.team.black {background:#102631;color:#ffffff;border:1.5px solid #f5f1e7;}
