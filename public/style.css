@@ -228,3 +228,5 @@
  .donate-launch{padding:6px 7px;font-size:11px}
  .donate-choice{font-size:11px}
 }
+
+.donate-custom-label[hidden],#donateQrReady[hidden],#donateQrPending[hidden]{display:none!important}
