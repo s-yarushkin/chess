@@ -18,7 +18,7 @@ export function verifyTelegram(raw,token,now=Math.floor(Date.now()/1000)){
   if(!u||!Number.isSafeInteger(u.id)||u.id<=0)throw Error('Invalid user');
   // A closed pilot must not silently become public when the allowlist is unset.
   const allowed=(process.env.PILOT_TELEGRAM_IDS||'').split(',').map(s=>s.trim()).filter(Boolean);
-  if(!allowed.includes(String(u.id)))throw Error('Аккаунт не включён в закрытый пилот');
+  if(!allowed.includes(String(u.id)))throw Error('Аккаунт не включён в закрытый пилот. Ваш Telegram ID: '+u.id);
   return {telegramId:String(u.id),suggestedName:String(u.first_name||'').slice(0,50)};
 }
 export function validName(s){return typeof s==='string'&&s.trim().length>=2&&s.trim().length<=30&&!/[<>\x00-\x1f]/.test(s);}
