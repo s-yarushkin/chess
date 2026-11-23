@@ -81,6 +81,12 @@ export async function stats(user){
   const game={streak:user.clean_streak,bestStreak:user.best_streak,counts, badges,level:index+1,levelName:['Разведчик','Искатель','Тактик','Стратег','Мастер задач','Легенда доски'][Math.min(index,5)],progress:{current:Math.max(0,user.solved_count-prev),target:next?next-prev:0,remaining:next?next-user.solved_count:0}};
   return {school,game,stage};
 }
+async function ensureActiveIdentity(db,user){
+  await db.query('SELECT pg_advisory_xact_lock(85731,hashtext($1))',[String(user.telegram_id)]);
+  const alias=await db.query('SELECT user_id FROM linked_telegram_identities WHERE telegram_id=$1',[user.telegram_id]);
+  if(alias.rowCount&&alias.rows[0].user_id!==user.id)
+    throw Error('Аккаунты уже объединены. Перезапусти игру, чтобы обновить вход');
+}
 export async function startAttempt(user,mode,category){
   const profile=await stats(user);
   if(mode==='category'&&!BASE[category])throw Error('Неизвестная категория');
@@ -90,6 +96,7 @@ export async function startAttempt(user,mode,category){
   const puzzle=pickPuzzle({category:mode==='category'?category:null,stage:profile.stage,skill:user.skill_rating,completed:completed.rows.map(x=>x.puzzle_id),recent:recent.rows.map(x=>x.puzzle_id)});
   const id=randomUUID(),now=Date.now();
   await tx(async db=>{
+    await ensureActiveIdentity(db,user);
     const old=await db.query("UPDATE attempts SET status='skipped',updated_at=$1 WHERE user_id=$2 AND status='active'",[now,user.id]);
     if(old.rowCount)await db.query('UPDATE users SET clean_streak=0 WHERE id=$1',[user.id]);
     await db.query(`INSERT INTO attempts(id,user_id,puzzle_id,current_fen,started_at,updated_at)
@@ -103,6 +110,7 @@ export function publicAttempt(a){
 }
 export async function findAttempt(user,id){const r=await getPool().query('SELECT * FROM attempts WHERE id=$1 AND user_id=$2',[id,user.id]);return r.rows[0]||null;}
 export async function hint(user,id){return tx(async db=>{
+  await ensureActiveIdentity(db,user);
   const result=await db.query('SELECT * FROM attempts WHERE id=$1 AND user_id=$2 FOR UPDATE',[id,user.id]);const a=result.rows[0];
   if(!a||a.status!=='active')throw Error('No active attempt');const p=getPuzzle(a.puzzle_id);if(!p)throw Error('Puzzle unavailable');
   const next=p.line[a.cursor];if(!next)throw Error('No hint');const hints=Math.min(2,a.hints+1);
@@ -112,6 +120,7 @@ export async function hint(user,id){return tx(async db=>{
 export async function submitMove(user,id,uci){
   if(!/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uci||''))throw Error('Invalid move');
   return tx(async db=>{
+    await ensureActiveIdentity(db,user);
     const result=await db.query('SELECT * FROM attempts WHERE id=$1 AND user_id=$2 FOR UPDATE',[id,user.id]),a=result.rows[0];
     if(!a)throw Error('Attempt not found');if(a.status!=='active')throw Error('Attempt already completed');
     const p=getPuzzle(a.puzzle_id);if(!p)throw Error('Puzzle unavailable');
