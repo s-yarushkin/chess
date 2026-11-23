@@ -6,6 +6,7 @@ import {createLeague,listLeagues,leagueDetails,inviteToLeague,requestLeague,deci
 import {createInvite,requestFriend,respondFriend,removeFriend,friendsSnapshot} from '../src/cloud-friends.js';
 import {getDonationInfo,getDonationQr} from '../src/donation-api.js';
 import {DEFAULT_DONATION_OZON_URL} from '../src/donation.js';
+import {startAdminMerge,previewAdminMerge,confirmAdminMerge} from '../src/admin-account-merge.js';
 
 function send(res,data,status=200){res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');res.statusCode=status;res.end(JSON.stringify(data));}
 function matches(a,b){const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y);}
@@ -51,6 +52,17 @@ export default async function handler(req,res){
     if(path==='/api/auth/dev')return send(res,{error:'Тестовый вход отключён'},404);
     const bearer=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');const user=await currentUser(bearer);
     if(!user)return send(res,{error:'Необходимо войти через Telegram'},401);
+    // One-off account merge, strictly limited to two signed Telegram identities.
+    if(path==='/api/admin/merge/start'&&method==='POST')
+      return send(res,await startAdminMerge(user,(await payload(req)).initData),201);
+    if(path==='/api/admin/merge/preview'&&method==='POST'){
+      const body=await payload(req);return send(res,await previewAdminMerge(user,body.initData,body.code));
+    }
+    if(path==='/api/admin/merge/confirm'&&method==='POST'){
+      const body=await payload(req);
+      return send(res,await confirmAdminMerge(user,body.initData,body.code,body.confirm));
+    }
+    if(path.startsWith('/api/admin/'))return send(res,{error:'Not found'},404);
     if(path==='/api/me'&&method==='GET')return send(res,{...publicUser(user),...await stats(user)});
     if(path==='/api/me'&&method==='PATCH'){
       const u=await updateProfile(user,await payload(req));return send(res,{...publicUser(u),...await stats(u)});
@@ -94,7 +106,7 @@ export default async function handler(req,res){
     }
     return send(res,{error:'Not found'},404);
   }catch(e){
-    const client=/^(Invalid|Duplicate|No active|Attempt|Illegal|Puzzle|Все задачи|Категория|Неизвестная|Неверный|Необходимо|Имя|Общий рейтинг|Режим друзей|Аккаунт|Сначала|Приглашение|Список друзей|Сегодня|Вы уже друзья|Запрос|Лига|Приглашение|Только создатель|Для лиги|Название лиги|Можно участвовать|Можно создать|У игрока|Ты уже|Создатель|Заявка|Удалять игроков|Закрыть лигу|Request too large)/.test(e.message);
+    const client=/^(Invalid|Duplicate|No active|Attempt|Illegal|Puzzle|Все задачи|Категория|Неизвестная|Неверный|Необходимо|Имя|Общий рейтинг|Режим друзей|Аккаунт|Сначала|Приглашение|Список друзей|Сегодня|Вы уже друзья|Запрос|Код истёк|Неверный код|Нужно подтвердить|Разовое объединение|Сегодня уже создано|В исходном профиле|Аккаунт уже объединён|Операция объединения|Лига|Приглашение|Только создатель|Для лиги|Название лиги|Можно участвовать|Можно создать|У игрока|Ты уже|Создатель|Заявка|Удалять игроков|Закрыть лигу|Request too large)/.test(e.message);
     if(!client)console.error('Chess Academy cloud request failed:',e.message);
     return send(res,{error:client?e.message:'Server error'},client?400:503);
   }

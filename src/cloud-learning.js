@@ -24,10 +24,22 @@ export const publicUser=u=>({id:u.id,displayName:u.display_name,leaderboardOptIn
 export async function authenticateTelegram(raw){
   const {telegramId,suggestedName}=verifyTelegram(raw,process.env.TG_BOT_TOKEN);
   const now=Date.now(),userId=randomUUID();
-  const r=await getPool().query(`INSERT INTO users (id,telegram_id,created_at) VALUES ($1,$2,$3)
-   ON CONFLICT (telegram_id) DO UPDATE SET telegram_id=EXCLUDED.telegram_id RETURNING *`,[userId,telegramId,now]);
-  const user=r.rows[0],token=randomBytes(32).toString('base64url'),hash=createHash('sha256').update(token).digest('hex');
-  await getPool().query('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES ($1,$2,$3)',[hash,user.id,now+30*86400000]);
+  const token=randomBytes(32).toString('base64url'),hash=createHash('sha256').update(token).digest('hex');
+  const user=await tx(async db=>{
+    // Lock the Telegram identity during sign-in so it cannot race a one-off merge.
+    await db.query('SELECT pg_advisory_xact_lock(85731,hashtext($1))',[telegramId]);
+    const linked=await db.query(`SELECT u.* FROM linked_telegram_identities l
+      JOIN users u ON u.id=l.user_id WHERE l.telegram_id=$1`,[telegramId]);
+    let profile=linked.rows[0];
+    if(!profile){
+      const r=await db.query(`INSERT INTO users (id,telegram_id,created_at) VALUES ($1,$2,$3)
+       ON CONFLICT (telegram_id) DO UPDATE SET telegram_id=EXCLUDED.telegram_id RETURNING *`,
+        [userId,telegramId,now]);
+      profile=r.rows[0];
+    }
+    await db.query('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES ($1,$2,$3)',[hash,profile.id,now+30*86400000]);
+    return profile;
+  });
   return {token,user:publicUser(user),suggestedName};
 }
 export async function currentUser(bearer){

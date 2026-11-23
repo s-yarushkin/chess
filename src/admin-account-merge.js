@@ -24,9 +24,6 @@ export function verifyMergeActor(raw,token,expected,user){
   return signed.telegramId;
 }
 export function mergeCodeValid(value){return typeof value==='string'&&CODE.test(value.trim());}
-const assertTarget=(signed,telegramId)=>{
- if(signed.telegramId!==String(telegramId))denied();
-};
 const sourceSocialCount=async(db,id)=>{
  const r=await db.query(
   \`SELECT
@@ -107,11 +104,15 @@ export async function confirmAdminMerge(user,raw,code,confirmed,now=Date.now()){
   const request=await requestByCode(db,code,now,true);
   const sourceId=request.source_user_id,targetId=user.id;
   if(sourceId===targetId)denied();
+  // Acquire identity locks BEFORE user row locks to match the login lock order.
+  const pre=(await db.query('SELECT id,telegram_id FROM users WHERE id=ANY($1::uuid[])',
+    [[sourceId,targetId]])).rows;
+  if(pre.length!==2)denied();
+  await lockBoth(db,pre[0].telegram_id,pre[1].telegram_id);
   const actors=(await db.query(
     'SELECT * FROM users WHERE id=ANY($1::uuid[]) ORDER BY id FOR UPDATE',[[sourceId,targetId]])).rows;
   const source=actors.find(u=>u.id===sourceId),target=actors.find(u=>u.id===targetId);
   if(!source||!target||target.telegram_id!==user.telegram_id)denied();
-  await lockBoth(db,source.telegram_id,target.telegram_id);
   if(await count(db,'SELECT COUNT(*)::int AS n FROM admin_account_merges',[])>0)
    throw Error('Разовое объединение уже выполнено');
   if((await db.query('SELECT 1 FROM linked_telegram_identities WHERE telegram_id IN ($1,$2)',
