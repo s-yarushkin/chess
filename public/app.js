@@ -310,8 +310,10 @@ async function begin(){
   state.features=config;
   for(const mode of ['friends','leagues']){const tab=document.querySelector('.tab[data-mode="'+mode+'"]');if(tab)tab.hidden=!config.friendsEnabled;}
   const label=$('friendsOptIn').closest('label');if(label)label.hidden=!config.friendsEnabled;
+  const telegramId=String(tg?.initDataUnsafe?.user?.id||'');
+  if(telegramId&&sessionStorage.getItem('chess_session_tg')!==telegramId){state.token='';sessionStorage.removeItem('chess_session');}
   if(!state.token){if(tg?.initData){const login=await api('/api/auth/telegram',{method:'POST',body:JSON.stringify({initData:tg.initData})});
-   state.token=login.token;sessionStorage.setItem('chess_session',state.token);
+   state.token=login.token;sessionStorage.setItem('chess_session',state.token);if(telegramId)sessionStorage.setItem('chess_session_tg',telegramId);
   }else{if(config.demo)$('devLogin').hidden=false;$('auth').showModal();return;}}
   await refreshMe();await syncCatalog();if(!state.me.displayName){$('profile').showModal();return;}await newPuzzle();
  }catch(e){sessionStorage.removeItem('chess_session');state.token='';$('authError').textContent=e.message;$('auth').showModal();}
