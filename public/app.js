@@ -17,7 +17,7 @@ try{tg?.ready();tg?.expand();}catch{}
 async function api(path,options={}){
  const res=await fetch(path,{...options,headers:{'Content-Type':'application/json',...(state.token?{'Authorization':'Bearer '+state.token}:{}),...options.headers}});
  let data;try{data=await res.json();}catch{throw Error('Не удалось получить ответ сервера');}
- if(!res.ok)throw Error(data.error||'Ошибка соединения');return data;
+ if(!res.ok){const error=Error(data.error||'Ошибка соединения');error.code=data.code||null;error.status=res.status;throw error;}return data;
 }
 function setPreference(name,on){prefs[name]=on;try{localStorage.setItem('chess_'+name,String(on));}catch{}renderPreferences();}
 function renderPreferences(){
@@ -100,7 +100,7 @@ async function choose(i){
  let m=candidates[0];
  if(candidates.length>1){const choice=window.prompt('Превращение: q — ферзь, r — ладья, b — слон, n — конь','q');
   if(choice===null)return;m=candidates.find(move=>move[2]===choice.trim().toLowerCase());if(!m){toast('Выбери q, r, b или n');return;}}
- const from=m[0],to=m[1],attemptId=state.attempt.id;state.busy=true;buttonStatus();
+ const from=m[0],to=m[1],attemptId=state.attempt.id;let stale=false;state.busy=true;buttonStatus();
  try{
   const result=await api(`/api/attempts/${attemptId}/move`,{method:'POST',body:JSON.stringify({uci:key(m)})});
   if(state.attempt?.id!==attemptId)return;
@@ -120,7 +120,8 @@ async function choose(i){
     else if(state.me.game.streak>=3)toast(`⚡ ${state.me.game.streak} чистых решений — отличный расчёт!`);
    }catch{toast('Задача решена. Не удалось обновить профиль.');}
   }else{notice(`Хорошо! ${result.defense?'Соперник ответил '+result.defense+'. Твой ход!':'Продолжай комбинацию!'}`);sound('step');}
- }catch(e){notice(e.message,'error');}finally{state.busy=false;board();}
+ }catch(e){if(e.code==='ATTEMPT_STALE')stale=true;else notice(e.message,'error');}finally{state.busy=false;board();}
+ if(stale)await recoverStaleAttempt();
 }
 function displayBadges(){
  const badges=state.me?.game?.badges||[],container=$('medals');container.replaceChildren();
@@ -163,26 +164,61 @@ async function syncCatalog(){
   }
  }catch{/* Availability is checked again on the server. */}
 }
+function showAttempt(a,message){
+ state.attempt=a;state.selected=-1;state.lastMove=[];state.hints=a.hints||0;
+ $('hintMessage').hidden=true;
+ $('challenge').textContent=labels[state.mode];
+ $('title').textContent=labels[a.category]||'Шахматная задача';
+ $('description').textContent=a.lesson?.prompt||'Найди сильнейший ход.';
+ $('difficulty').textContent=a.rating<650?'Начальный':a.rating<900?'Знакомый':a.rating<1200?'Интересный':'Сложный';
+ $('reward').textContent='★ '+Math.max(1,(points[a.category]||0)-(a.hints>0?1:0));
+ notice(message||a.lesson?.prompt||'Выбери фигуру и найди лучший ход.');
+ board();
+}
+async function resumePuzzle(){
+ try{
+  const data=await api('/api/attempts/active');
+  if(data.attempt){showAttempt(data.attempt,'Продолжаем незавершённую задачу. Выбери ход!');return;}
+ }catch{/* If the resume query is unavailable, the regular start handles the error. */}
+ await newPuzzle();
+}
+async function recoverStaleAttempt(){
+ // A past attempt may have been superseded by a new task or an account merge.
+ // Never keep accepting moves from an outdated FEN.
+ try{
+  const data=await api('/api/attempts/active');
+  if(data.attempt){
+   showAttempt(data.attempt,'Позиция обновилась. Продолжаем актуальную задачу!');
+  }else{
+   await newPuzzle();
+   if(state.attempt?.status==='active')notice('Прошлая задача уже завершена. Открыта новая — продолжай!');
+  }
+  await refreshMe();
+ }catch{
+  if(state.attempt)state.attempt.status='skipped';
+  notice('Не удалось обновить задачу. Нажми «Следующая», чтобы продолжить.','error');
+  board();
+ }
+}
 async function newPuzzle(){
  if(state.busy)return;state.busy=true;state.selected=-1;state.lastMove=[];state.hints=0;
  $('hintMessage').hidden=true;resetFx();$('challenge').textContent=labels[state.mode];buttonStatus();
  try{
   const params=state.mode==='progressive'?{mode:'progressive'}:{mode:'category',category:state.mode};
-  const a=await api('/api/attempts',{method:'POST',body:JSON.stringify(params)});state.attempt=a;
-  $('title').textContent=labels[a.category];$('description').textContent=a.lesson?.prompt||'Найди шах и ответ соперника. Затем выбирай ход.';
-  $('difficulty').textContent=a.rating<650?'Начальный':a.rating<900?'Знакомый':a.rating<1200?'Интересный':'Сложный';$('reward').textContent='★ '+(points[a.category]||0);
-  notice(a.lesson?.prompt||'Твой ход! Выбери свою фигуру — увидишь доступные клетки.');
+  const a=await api('/api/attempts',{method:'POST',body:JSON.stringify(params)});
+  showAttempt(a);
  }catch(e){state.attempt=null;notice(e.message,'error');$('title').textContent='Задачи пока не загружены';
   $('description').textContent='Эта категория откроется после наполнения проверенными шахматными позициями.';
  }finally{state.busy=false;board();}
 }
 async function hint(){
  if(!state.attempt||state.busy||state.attempt.status!=='active')return;
- state.busy=true;buttonStatus();
+ let stale=false;state.busy=true;buttonStatus();
  try{const data=await api(`/api/attempts/${state.attempt.id}/hint`,{method:'POST',body:'{}'}),h=data.hint;
   $('hintMessage').hidden=false;$('hintMessage').textContent=h.kind==='piece'?`Посмотри на фигуру ${h.square}.`:`Попробуй ${h.from} → ${h.to}.`;
   $('reward').textContent='★ '+Math.max(1,(points[state.attempt.category]||0)-1);toast('Подсказка помогает учиться. Хотя бы 1 ★ останется!');
- }catch(e){toast(e.message);}finally{state.busy=false;buttonStatus();}
+ }catch(e){if(e.code==='ATTEMPT_STALE')stale=true;else toast(e.message);}finally{state.busy=false;buttonStatus();}
+ if(stale)await recoverStaleAttempt();
 }
 async function changeMode(mode){
  if(state.busy)return;
@@ -315,7 +351,7 @@ async function begin(){
   if(!state.token){if(tg?.initData){const login=await api('/api/auth/telegram',{method:'POST',body:JSON.stringify({initData:tg.initData})});
    state.token=login.token;sessionStorage.setItem('chess_session',state.token);if(telegramId)sessionStorage.setItem('chess_session_tg',telegramId);
   }else{if(config.demo)$('devLogin').hidden=false;$('auth').showModal();return;}}
-  await refreshMe();await syncCatalog();if(!state.me.displayName){$('profile').showModal();return;}await newPuzzle();
+  await refreshMe();await syncCatalog();if(!state.me.displayName){$('profile').showModal();return;}await resumePuzzle();
  }catch(e){sessionStorage.removeItem('chess_session');state.token='';$('authError').textContent=e.message;$('auth').showModal();}
 }
 $('devEnter').addEventListener('click',async()=>{try{const login=await api('/api/auth/dev',{method:'POST',body:JSON.stringify({name:$('devName').value})});

@@ -1,6 +1,6 @@
 import {initDb} from '../src/cloud-db.js';
 import {getCatalog} from '../src/cloud-catalog.js';
-import {authenticateTelegram,currentUser,updateProfile,stats,startAttempt,findAttempt,publicAttempt,submitMove,hint,publicUser} from '../src/cloud-learning.js';
+import {authenticateTelegram,currentUser,updateProfile,stats,startAttempt,findAttempt,findActiveAttempt,publicAttempt,submitMove,hint,publicUser} from '../src/cloud-learning.js';
 import {timingSafeEqual} from 'node:crypto';
 import {createLeague,listLeagues,leagueDetails,inviteToLeague,requestLeague,decideLeagueRequest,leaveOrRemoveLeagueMember,closeLeague} from '../src/cloud-leagues.js';
 import {createInvite,requestFriend,respondFriend,removeFriend,friendsSnapshot} from '../src/cloud-friends.js';
@@ -81,6 +81,10 @@ export default async function handler(req,res){
       return send(res,await leaveOrRemoveLeagueMember(user,leagueMember[1],leagueMember[2]));
     if(path.startsWith('/api/leagues/'))return send(res,{error:'Неизвестная операция с лигой'},404);
     if(!user.display_name)return send(res,{error:'Сначала укажи имя в профиле'},409);
+    if(path==='/api/attempts/active'&&method==='GET'){
+      const a=await findActiveAttempt(user);
+      return send(res,{attempt:a?publicAttempt(a):null});
+    }
     if(path==='/api/attempts'&&method==='POST'){
       const p=await payload(req);return send(res,await startAttempt(user,p.mode||'progressive',p.category),201);
     }
@@ -95,7 +99,9 @@ export default async function handler(req,res){
     return send(res,{error:'Not found'},404);
   }catch(e){
     const client=/^(Invalid|Duplicate|No active|Attempt|Illegal|Puzzle|Все задачи|Категория|Неизвестная|Неверный|Необходимо|Имя|Общий рейтинг|Режим друзей|Аккаунт|Сначала|Приглашение|Список друзей|Сегодня|Вы уже друзья|Запрос|Код истёк|Неверный код|Нужно подтвердить|Разовое объединение|Сегодня уже создано|В исходном профиле|Аккаунт уже объединён|Операция объединения|Лига|Приглашение|Только создатель|Для лиги|Название лиги|Можно участвовать|Можно создать|У игрока|Ты уже|Создатель|Заявка|Удалять игроков|Закрыть лигу|Request too large)/.test(e.message);
+    const stale=['Attempt already completed','Attempt not found','No active attempt'].includes(e.message);
     if(!client)console.error('Chess Academy cloud request failed:',e.message);
+    if(stale)return send(res,{error:'Эта задача уже завершена. Обновляем игровую позицию.',code:'ATTEMPT_STALE'},409);
     return send(res,{error:client?e.message:'Server error'},client?400:503);
   }
 }
