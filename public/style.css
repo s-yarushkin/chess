@@ -236,14 +236,26 @@
  .donate-dialog .donate-quote{font-size:14px}
 }
 
-/* One-time private admin controls; hidden for ordinary players. */
-.admin-merge{margin-top:14px;padding:12px;border:1px solid #b6d6c8;background:#f2faf5;
- border-radius:12px;font-size:12px;line-height:1.4}
-.admin-merge h3{font-size:15px;margin:0 0 7px}
-.admin-merge p{font-size:12px;line-height:1.4}
-.admin-merge .button{width:100%;min-height:40px;margin:7px 0;font-size:12px}
-.admin-merge input{font-size:16px;min-height:42px;width:100%}
-.admin-merge-code,.admin-merge-preview{padding:10px;background:white;border-radius:8px;
- overflow-wrap:anywhere;font-size:12px}
-.admin-merge-code{font-weight:800}
-.admin-merge [hidden]{display:none!important}
+
+/* Telegram fullscreen overlays: keep header, tabs and dialogs inside Telegram's
+   content safe area, while normal web browser layouts keep zero extra inset. */
+:root {--chess-telegram-clear-top:0px;--chess-telegram-clear-bottom:0px;}
+@media(max-width:800px) {
+  .app {
+    padding-top:calc(8px + var(--chess-telegram-clear-top,0px));
+    padding-bottom:calc(14px + var(--chess-telegram-clear-bottom,0px));
+    padding-left:max(8px,env(safe-area-inset-left,0px));
+    padding-right:max(8px,env(safe-area-inset-right,0px));
+  }
+  html.chess-tg-fullscreen .dialog[open] {
+    position:fixed;
+    top:calc(var(--chess-telegram-clear-top) + 6px);
+    bottom:auto;
+    left:0;right:0;margin:0 auto;
+    max-height:calc(100dvh - var(--chess-telegram-clear-top) - 16px);
+    overflow-y:auto;
+  }
+  html.chess-tg-fullscreen #toast {
+    bottom:calc(20px + var(--chess-telegram-clear-bottom,0px));
+  }
+}
