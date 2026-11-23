@@ -7,7 +7,6 @@
 <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
 <script src="/viewport.js" defer></script>
 <script src="/donate.js" defer></script>
-<script src="/admin-merge.js" defer></script>
 <script type="module" src="/app.js" defer></script>
 </head>
 <body>
@@ -48,26 +47,7 @@
       <div class="foot"><button class="badges-link" id="badgesLink">🏅 Достижения <b id="badgeCount">0</b></button><span id="status">Не авторизован</span></div>
     </aside>
   </main>
-  <dialog id="profile" class="dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>Мой профиль</h2><p id="firstTimeWelcome">Добро пожаловать! Этот шахматный тренажёр запустили 8-летний Алексей и его папа Сергей. Напиши своё имя или никнейм — и начинай играть!</p><label for="name">Имя или никнейм</label><input type="text" id="name" maxlength="30" minlength="2" autocomplete="nickname" placeholder="Например, Лёша" required><label class="check"><input id="friendsOptIn" type="checkbox"> Делиться прогрессом с подтверждёнными друзьями и участниками моих лиг</label><small>Для безопасности используй короткий никнейм. Не указывай фамилию, школу, телефон или адрес. Прогресс видят только подтверждённые друзья и участники лиг, куда тебя одобрил создатель. Отключи галочку — и он станет невидимым.</small><button type="button" class="button primary" id="saveProfile">Сохранить</button><p id="profileError"></p>
-  <section id="adminMerge" class="admin-merge" hidden>
-    <h3>Разовое объединение профилей</h3>
-    <p>Только для @SergeyYarushkin и @N_Yarushkina. Один шахматный профиль с двух Telegram-аккаунтов.</p>
-    <div id="adminMergeSource" hidden>
-      <p>1. Создай код в @SergeyYarushkin и передай владельцу @N_Yarushkina.</p>
-      <button type="button" class="button soft" id="adminMergeCreate">Создать разовый код</button>
-      <p id="adminMergeCode" class="admin-merge-code" aria-live="polite"></p>
-    </div>
-    <div id="adminMergeTarget" hidden>
-      <p>2. В @N_Yarushkina введи код и проверь результаты.</p>
-      <label for="adminMergeInput">Код от @SergeyYarushkin</label>
-      <input id="adminMergeInput" type="text" maxlength="24" placeholder="24 символа" autocomplete="off">
-      <button type="button" class="button outline" id="adminMergePreview">Проверить перед объединением</button>
-      <div id="adminMergePreviewText" class="admin-merge-preview" hidden aria-live="polite"></div>
-      <button type="button" class="button primary" id="adminMergeConfirm" hidden>Подтвердить объединение</button>
-    </div>
-    <p id="adminMergeStatus" role="status" aria-live="polite"></p>
-    <small>Нужно подтверждение обоих Telegram-аккаунтов. При наличии друзей и лиг в исходном профиле операция остановится. Старые записи сохраняются.</small>
-  </section></form></dialog>
+  <dialog id="profile" class="dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>Мой профиль</h2><p id="firstTimeWelcome">Добро пожаловать! Этот шахматный тренажёр запустили 8-летний Алексей и его папа Сергей. Напиши своё имя или никнейм — и начинай играть!</p><label for="name">Имя или никнейм</label><input type="text" id="name" maxlength="30" minlength="2" autocomplete="nickname" placeholder="Например, Лёша" required><label class="check"><input id="friendsOptIn" type="checkbox"> Делиться прогрессом с подтверждёнными друзьями и участниками моих лиг</label><small>Для безопасности используй короткий никнейм. Не указывай фамилию, школу, телефон или адрес. Прогресс видят только подтверждённые друзья и участники лиг, куда тебя одобрил создатель. Отключи галочку — и он станет невидимым.</small><button type="button" class="button primary" id="saveProfile">Сохранить</button><p id="profileError"></p></form></dialog>
   <dialog id="auth" class="dialog"><div><h2>Добро пожаловать!</h2><p>«Шахматная академия» — тренажёр для обучения шахматам, который запустили 8-летний Алексей и его папа Сергей. Открой игру через Telegram, выбери имя и решай задачи!</p><div id="devLogin" hidden><label for="devName">Локальный тестовый вход</label><input id="devName" placeholder="Имя тестового игрока" minlength="2" maxlength="30"><button class="button primary" id="devEnter">Войти (только локально)</button></div><p id="authError"></p></div></dialog>
   <dialog id="friends" class="dialog friends-dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>🤝 Шахматный отряд</h2><p>У каждого свой темп! Смотри, чему научились друзья за последние 7 дней. Здесь нет общего рейтинга, чата и поиска незнакомцев.</p>
     <div class="friend-status" id="friendStatus">Загружаем...</div>
