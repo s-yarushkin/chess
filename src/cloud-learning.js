@@ -109,6 +109,10 @@ export function publicAttempt(a){
   return {id:a.id,position:a.current_fen,category:p.category,rating:p.rating,source:p.source,startedPosition:p.fen,errors:a.errors,hints:a.hints,status:a.status,lesson:{title,prompt,method}};
 }
 export async function findAttempt(user,id){const r=await getPool().query('SELECT * FROM attempts WHERE id=$1 AND user_id=$2',[id,user.id]);return r.rows[0]||null;}
+export async function findActiveAttempt(user){
+  const r=await getPool().query("SELECT * FROM attempts WHERE user_id=$1 AND status='active' ORDER BY started_at DESC,id DESC LIMIT 1",[user.id]);
+  return r.rows[0]||null;
+}
 export async function hint(user,id){return tx(async db=>{
   await ensureActiveIdentity(db,user);
   const result=await db.query('SELECT * FROM attempts WHERE id=$1 AND user_id=$2 FOR UPDATE',[id,user.id]);const a=result.rows[0];
