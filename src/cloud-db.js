@@ -67,6 +67,20 @@ export async function initDb(){
     await db.query('CREATE INDEX IF NOT EXISTS idx_league_members_user ON league_members(user_id)');
     await db.query('CREATE INDEX IF NOT EXISTS idx_league_invites_recent ON league_invites(league_id,created_at DESC)');
     await db.query('CREATE INDEX IF NOT EXISTS idx_league_requests_pending ON league_requests(league_id,status,created_at)');
+    await db.query(`CREATE TABLE IF NOT EXISTS linked_telegram_identities (
+      telegram_id TEXT PRIMARY KEY,user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      linked_at BIGINT NOT NULL)`);
+    await db.query(`CREATE TABLE IF NOT EXISTS admin_merge_requests (
+      id UUID PRIMARY KEY,source_user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      code_hash TEXT NOT NULL UNIQUE,created_at BIGINT NOT NULL,expires_at BIGINT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('pending','cancelled','used')),
+      used_at BIGINT)`);
+    await db.query(`CREATE TABLE IF NOT EXISTS admin_account_merges (
+      source_user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE RESTRICT,
+      target_user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      source_telegram_id TEXT NOT NULL UNIQUE,target_telegram_id TEXT NOT NULL,
+      merged_at BIGINT NOT NULL,summary JSONB NOT NULL)`);
+    await db.query('CREATE INDEX IF NOT EXISTS idx_admin_merge_requests_source ON admin_merge_requests(source_user_id,created_at DESC)');
     await db.query('CREATE INDEX IF NOT EXISTS idx_attempts_active ON attempts(user_id,status,started_at)');
     await db.query('CREATE INDEX IF NOT EXISTS idx_completions_recent_pg ON completions(user_id,solved_at DESC)');
     return db;
