@@ -259,3 +259,15 @@
     bottom:calc(20px + var(--chess-telegram-clear-bottom,0px));
   }
 }
+
+
+/* Clearly direct web visitors to Telegram, where signed player login works. */
+#auth .auth-bot-link{
+  display:flex;align-items:center;justify-content:center;
+  min-height:46px;padding:10px 18px;margin:16px 0 8px;
+  background:#0b8d77;color:#fff;border-radius:12px;
+  font-size:15px;font-weight:800;text-align:center;text-decoration:none;
+}
+#auth .auth-bot-link:hover{background:#08765f}
+#auth .auth-bot-link:focus-visible{outline:3px solid #ffc65b;outline-offset:3px}
+#auth .auth-bot-help{font-size:12px;line-height:1.45;margin:4px 0 0}
