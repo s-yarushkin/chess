@@ -16,7 +16,7 @@ test('API provides a private resume endpoint and typed stale-attempt conflict',(
  assert.match(app,/await resumePuzzle\(\)/);
  assert.match(app,/async function recoverStaleAttempt\(\)/);
  assert.match(app,/e\.code==='ATTEMPT_STALE'/);
- assert.doesNotMatch(app,/notice\(e\.message,'error'\).*finally\{state\.busy=false;board\(\)/);
+ assert.match(app,/if\(stale\)await recoverStaleAttempt\(\)/);
 });
 
 test('Neon-style PostgreSQL: resuming does not skip; stale attempt does not double score',
@@ -43,7 +43,7 @@ test('Neon-style PostgreSQL: resuming does not skip; stale attempt does not doub
    assert.equal((await findActiveAttempt(user)).id,second.id);
    await assert.rejects(()=>submitMove(user,first.id,'a1a2'),/Attempt already completed/);
 
-   const puzzle=getPuzzle(second.puzzle_id);
+   const puzzle=getPuzzle((await findAttempt(user,second.id)).puzzle_id);
    const final=await submitMove(user,second.id,puzzle.line[0]);
    assert.equal(final.correct,true);
    assert.equal(final.completed,true);
