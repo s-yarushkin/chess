@@ -26,22 +26,22 @@ export function verifyMergeActor(raw,token,expected,user){
 export function mergeCodeValid(value){return typeof value==='string'&&CODE.test(value.trim());}
 const sourceSocialCount=async(db,id)=>{
  const r=await db.query(
-  \`SELECT
+  `SELECT
      (SELECT COUNT(*) FROM friend_invites WHERE owner_id=$1) +
      (SELECT COUNT(*) FROM friend_requests WHERE requester_id=$1 OR recipient_id=$1) +
      (SELECT COUNT(*) FROM friendships WHERE user_a=$1 OR user_b=$1) +
      (SELECT COUNT(*) FROM leagues WHERE owner_id=$1) +
      (SELECT COUNT(*) FROM league_members WHERE user_id=$1) +
-     (SELECT COUNT(*) FROM league_requests WHERE user_id=$1) AS n\`,[id]);
+     (SELECT COUNT(*) FROM league_requests WHERE user_id=$1) AS n`,[id]);
  return Number(r.rows[0]?.n||0);
 };
 const mergedSummary=async(db,source,target)=>{
  const r=await db.query(
-  \`SELECT
+  `SELECT
     (SELECT COUNT(*)::int FROM completions WHERE user_id=$1) AS source_solved,
     (SELECT COUNT(*)::int FROM completions WHERE user_id=$2) AS target_solved,
     (SELECT COUNT(DISTINCT puzzle_id)::int FROM completions WHERE user_id IN ($1,$2)) AS combined_solved,
-    (SELECT COUNT(*)::int FROM attempts WHERE user_id=$1) AS source_attempts\`,[source.id,target.id]);
+    (SELECT COUNT(*)::int FROM attempts WHERE user_id=$1) AS source_attempts`,[source.id,target.id]);
  return {sourceName:source.display_name,targetName:target.display_name,
   sourceSolved:r.rows[0].source_solved,targetSolved:r.rows[0].target_solved,
   combinedSolved:r.rows[0].combined_solved,sourceAttempts:r.rows[0].source_attempts};
@@ -124,16 +124,16 @@ export async function confirmAdminMerge(user,raw,code,confirmed,now=Date.now()){
   // The source user's rows are deliberately retained as a recovery snapshot.
   // Move only *copies* of its learning history to the target identity.
   await db.query(
-    \`INSERT INTO completions(user_id,puzzle_id,category,points,solved_at)
+    `INSERT INTO completions(user_id,puzzle_id,category,points,solved_at)
       SELECT $1,puzzle_id,category,points,solved_at FROM completions WHERE user_id=$2
       ON CONFLICT(user_id,puzzle_id) DO UPDATE
       SET points=GREATEST(completions.points,EXCLUDED.points),
-          solved_at=LEAST(completions.solved_at,EXCLUDED.solved_at)\`,[target.id,source.id]);
+          solved_at=LEAST(completions.solved_at,EXCLUDED.solved_at)`,[target.id,source.id]);
   await db.query(
-    \`INSERT INTO attempts(id,user_id,puzzle_id,current_fen,cursor,hints,errors,status,started_at,updated_at)
+    `INSERT INTO attempts(id,user_id,puzzle_id,current_fen,cursor,hints,errors,status,started_at,updated_at)
       SELECT gen_random_uuid(),$1,puzzle_id,current_fen,cursor,hints,errors,
              CASE WHEN status='active' THEN 'skipped' ELSE status END,
-             started_at,updated_at FROM attempts WHERE user_id=$2\`,[target.id,source.id]);
+             started_at,updated_at FROM attempts WHERE user_id=$2`,[target.id,source.id]);
 
   // Recompute actual score instead of summing aggregate counters (overlapping
   // positions must count once).
@@ -142,9 +142,9 @@ export async function confirmAdminMerge(user,raw,code,confirmed,now=Date.now()){
     [target.id])).rows[0];
   const skill=Number(target.solved_count)>=Number(source.solved_count)?target.skill_rating:source.skill_rating;
   await db.query(
-    \`UPDATE users SET display_name=$1,points=$2,solved_count=$3,skill_rating=$4,
+    `UPDATE users SET display_name=$1,points=$2,solved_count=$3,skill_rating=$4,
        clean_streak=0,best_streak=GREATEST(best_streak,$5)
-       WHERE id=$6\`,
+       WHERE id=$6`,
     [target.display_name||source.display_name,totals.points,totals.n,skill,source.best_streak,target.id]);
 
   // Existing sessions and future verified logins from both accounts use one
