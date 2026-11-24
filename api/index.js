@@ -1,13 +1,13 @@
 import {initDb} from '../src/cloud-db.js';
 import {getCatalog} from '../src/cloud-catalog.js';
-import {authenticateTelegram,currentUser,updateProfile,stats,startAttempt,findAttempt,findActiveAttempt,publicAttempt,submitMove,hint,publicUser} from '../src/cloud-learning.js';
+import {verifyTelegram,authenticateTelegram,currentUser,updateProfile,stats,startAttempt,findAttempt,findActiveAttempt,publicAttempt,submitMove,hint,publicUser} from '../src/cloud-learning.js';
 import {timingSafeEqual} from 'node:crypto';
 import {createLeague,listLeagues,leagueDetails,inviteToLeague,requestLeague,decideLeagueRequest,leaveOrRemoveLeagueMember,closeLeague} from '../src/cloud-leagues.js';
 import {createInvite,requestFriend,respondFriend,removeFriend,friendsSnapshot} from '../src/cloud-friends.js';
 import {getDonationInfo,getDonationQr} from '../src/donation-api.js';
 import {DEFAULT_DONATION_OZON_URL} from '../src/donation.js';
 import {notifyRegistration,registeredCount,isRegistrationCommand,recipient} from '../src/registration-notifications.js';
-import {webhookSecretFor,authorizedNotifier,activateWebhook,checkWebhook} from '../src/webhook-setup.js';
+import {webhookSecretFor,authorizedNotifier,recipientState,activateWebhook,checkWebhook} from '../src/webhook-setup.js';
 
 function send(res,data,status=200){res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');res.statusCode=status;res.end(JSON.stringify(data));}
 function matches(a,b){const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y);}
@@ -63,14 +63,22 @@ export default async function handler(req,res){
     if(path==='/api/admin/registrations/status'&&method==='POST'){
       const body=await payload(req);
       if(!await authorizedNotifier(user,body.initData))return send(res,{error:'Not found'},404);
+      const settings=recipientState(body.initData);
       const state=await checkWebhook().catch(e=>({connected:false,pending:null,lastError:e.message}));
-      return send(res,{admin:true,...state});
+      return send(res,{admin:true,...settings,...state});
     }
     if(path==='/api/admin/registrations/activate'&&method==='POST'){
       const body=await payload(req);
       if(!await authorizedNotifier(user,body.initData))return send(res,{error:'Not found'},404);
-      try{return send(res,{admin:true,...await activateWebhook()});}
-      catch(e){return send(res,{error:e.message||'Не удалось подключить Telegram'},502);}
+      const settings=recipientState(body.initData);
+      if(!settings.recipientReady)
+        return send(res,{error:settings.reason==='missing'?
+          'Настройки уведомлений не найдены в Production Vercel. Проверь обе переменные и сделай Redeploy.':
+          'Настройки получателя Vercel не совпадают с твоим Telegram-аккаунтом.'},409);
+      try{
+        const signed=verifyTelegram(body.initData,process.env.TG_BOT_TOKEN);
+        return send(res,{admin:true,...settings,...await activateWebhook({expectedRecipientId:signed.telegramId})});
+      }catch(e){return send(res,{error:e.message||'Не удалось подключить Telegram'},502);}
     }
     if(path.startsWith('/api/admin/'))return send(res,{error:'Not found'},404);
     if(path==='/api/me'&&method==='GET')return send(res,{...publicUser(user),...await stats(user)});
