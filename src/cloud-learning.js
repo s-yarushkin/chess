@@ -52,9 +52,15 @@ export async function updateProfile(user,body){
   if(body.displayName!==undefined && !validName(body.displayName))throw Error('Имя от 2 до 30 символов');
   if(body.friendsOptIn!==undefined && typeof body.friendsOptIn!=='boolean')throw Error('Неверное значение настройки друзей');
   if(body.leaderboardOptIn===true)throw Error('Общий рейтинг отключён');
-  const name=body.displayName===undefined?user.display_name:body.displayName.trim();
-  const sharing=body.friendsOptIn===undefined?!!user.friends_opt_in:body.friendsOptIn;
-  const r=await getPool().query('UPDATE users SET display_name=$1,friends_opt_in=$2,leaderboard_opt_in=FALSE WHERE id=$3 RETURNING *',[name,sharing,user.id]);return r.rows[0];
+  return tx(async db=>{
+    const current=(await db.query('SELECT * FROM users WHERE id=$1 FOR UPDATE',[user.id])).rows[0];
+    if(!current)throw Error('Необходимо войти через Telegram');
+    const name=body.displayName===undefined?current.display_name:body.displayName.trim();
+    const sharing=body.friendsOptIn===undefined?!!current.friends_opt_in:body.friendsOptIn;
+    const r=await db.query('UPDATE users SET display_name=$1,friends_opt_in=$2,leaderboard_opt_in=FALSE WHERE id=$3 RETURNING *',[name,sharing,current.id]);
+    // Only the first completed profile is a registration, including concurrent PATCH requests.
+    return {...r.rows[0],firstRegistration:!current.display_name&&!!name};
+  });
 }
 export async function stats(user){
   const r=await getPool().query(`SELECT category,COUNT(*)::int AS n FROM completions WHERE user_id=$1 GROUP BY category`,[user.id]);
