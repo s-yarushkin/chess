@@ -6,6 +6,7 @@ import {createLeague,listLeagues,leagueDetails,inviteToLeague,requestLeague,deci
 import {createInvite,requestFriend,respondFriend,removeFriend,friendsSnapshot} from '../src/cloud-friends.js';
 import {getDonationInfo,getDonationQr} from '../src/donation-api.js';
 import {DEFAULT_DONATION_OZON_URL} from '../src/donation.js';
+import {notifyRegistration,registeredCount,isRegistrationCommand,recipient} from '../src/registration-notifications.js';
 
 function send(res,data,status=200){res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');res.statusCode=status;res.end(JSON.stringify(data));}
 function matches(a,b){const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y);}
@@ -40,6 +41,12 @@ export default async function handler(req,res){
     if(path==='/telegram/webhook'&&method==='POST'){
       if(!process.env.TG_WEBHOOK_SECRET||!matches(req.headers['x-telegram-bot-api-secret-token'],process.env.TG_WEBHOOK_SECRET))return send(res,{error:'Forbidden'},403);
       const p=await payload(req);const m=p?.message;
+      if(isRegistrationCommand(m)){
+        await initDb();
+        const total=await registeredCount();
+        await sendBot(recipient().id,'♟ Всего зарегистрировано: '+total+'\nЛичные уведомления о регистрациях включены.',{protect_content:true});
+        return send(res,{ok:true});
+      }
       if(m?.text?.trim().startsWith('/start')&&process.env.WEBAPP_URL){
         await sendBot(m.chat.id,'♟ Шахматная академия. Открой тренажёр и решай задачи!',{reply_markup:{inline_keyboard:[[{text:'Играть',web_app:{url:process.env.WEBAPP_URL}}]]}});
       }
@@ -53,7 +60,9 @@ export default async function handler(req,res){
     if(!user)return send(res,{error:'Необходимо войти через Telegram'},401);
     if(path==='/api/me'&&method==='GET')return send(res,{...publicUser(user),...await stats(user)});
     if(path==='/api/me'&&method==='PATCH'){
-      const u=await updateProfile(user,await payload(req));return send(res,{...publicUser(u),...await stats(u)});
+      const u=await updateProfile(user,await payload(req));
+      if(u.firstRegistration)await notifyRegistration();
+      return send(res,{...publicUser(u),...await stats(u)});
     }
     if(path==='/api/leaderboard'&&method==='GET')return send(res,{users:[],private:true});
     if(path==='/api/friends'&&method==='GET')return send(res,await friendsSnapshot(user));
