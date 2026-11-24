@@ -54,11 +54,19 @@
       form.appendChild(box);
     }
     const status=box.querySelector('#registrationAdminStatus');
+    const button=box.querySelector('#registrationAdminActivate');
+    if(info.recipientReady===false){
+      status.textContent=info.reason==='missing'?
+        'В Production Vercel не найдены настройки получателя. Проверь REGISTRATION_ADMIN_CHAT_ID и REGISTRATION_ADMIN_USERNAME, затем сделай Redeploy.':
+        'Настройки получателя в Vercel не совпадают с текущим Telegram-аккаунтом. Проверь обе переменные и Production Redeploy.';
+      button.hidden=true;
+      return;
+    }
     status.textContent=info.connected?
       'Telegram подключён. Напиши боту /registrations для проверки.':
       'Telegram ещё не доставляет команды на сервер.';
     if(info.lastError)status.textContent+=' Ошибка: '+String(info.lastError).slice(0,150);
-    box.querySelector('#registrationAdminActivate').hidden=!!info.connected;
+    button.hidden=!!info.connected;
   }
   async function inspect(){
     if(checking||!tg()?.initData)return;
