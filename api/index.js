@@ -63,7 +63,8 @@ export default async function handler(req,res){
     if(path==='/api/admin/registrations/status'&&method==='POST'){
       const body=await payload(req);
       if(!await authorizedNotifier(user,body.initData))return send(res,{error:'Not found'},404);
-      return send(res,{admin:true,...await checkWebhook()});
+      const state=await checkWebhook().catch(e=>({connected:false,pending:null,lastError:e.message}));
+      return send(res,{admin:true,...state});
     }
     if(path==='/api/admin/registrations/activate'&&method==='POST'){
       const body=await payload(req);
