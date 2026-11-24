@@ -69,7 +69,8 @@ export default async function handler(req,res){
     if(path==='/api/admin/registrations/activate'&&method==='POST'){
       const body=await payload(req);
       if(!await authorizedNotifier(user,body.initData))return send(res,{error:'Not found'},404);
-      return send(res,{admin:true,...await activateWebhook()});
+      try{return send(res,{admin:true,...await activateWebhook()});}
+      catch(e){return send(res,{error:e.message||'Не удалось подключить Telegram'},502);}
     }
     if(path.startsWith('/api/admin/'))return send(res,{error:'Not found'},404);
     if(path==='/api/me'&&method==='GET')return send(res,{...publicUser(user),...await stats(user)});
