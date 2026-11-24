@@ -7,6 +7,7 @@ import {createInvite,requestFriend,respondFriend,removeFriend,friendsSnapshot} f
 import {getDonationInfo,getDonationQr} from '../src/donation-api.js';
 import {DEFAULT_DONATION_OZON_URL} from '../src/donation.js';
 import {notifyRegistration,registeredCount,isRegistrationCommand,recipient} from '../src/registration-notifications.js';
+import {webhookSecretFor,authorizedNotifier,activateWebhook,checkWebhook} from '../src/webhook-setup.js';
 
 function send(res,data,status=200){res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');res.statusCode=status;res.end(JSON.stringify(data));}
 function matches(a,b){const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y);}
@@ -39,7 +40,8 @@ export default async function handler(req,res){
       await initDb();const catalog=getCatalog();return send(res,{status:'ok',database:'connected',catalog:catalog.counts,publicAccess:true});
     }
     if(path==='/telegram/webhook'&&method==='POST'){
-      if(!process.env.TG_WEBHOOK_SECRET||!matches(req.headers['x-telegram-bot-api-secret-token'],process.env.TG_WEBHOOK_SECRET))return send(res,{error:'Forbidden'},403);
+      const webhookSecret=webhookSecretFor();
+      if(!webhookSecret||!matches(req.headers['x-telegram-bot-api-secret-token'],webhookSecret))return send(res,{error:'Forbidden'},403);
       const p=await payload(req);const m=p?.message;
       if(isRegistrationCommand(m)){
         await initDb();
@@ -47,8 +49,8 @@ export default async function handler(req,res){
         await sendBot(recipient().id,'♟ Всего зарегистрировано: '+total+'\nЛичные уведомления о регистрациях включены.',{protect_content:true});
         return send(res,{ok:true});
       }
-      if(m?.text?.trim().startsWith('/start')&&process.env.WEBAPP_URL){
-        await sendBot(m.chat.id,'♟ Шахматная академия. Открой тренажёр и решай задачи!',{reply_markup:{inline_keyboard:[[{text:'Играть',web_app:{url:process.env.WEBAPP_URL}}]]}});
+      if(m?.chat?.type==='private'&&m?.text?.trim().startsWith('/start')){
+        await sendBot(m.chat.id,'♟ Шахматная академия. Открой тренажёр и решай задачи!',{reply_markup:{inline_keyboard:[[{text:'Играть',web_app:{url:process.env.WEBAPP_URL||'https://chess-academy-theta.vercel.app'}}]]}});
       }
       return send(res,{ok:true});
     }
@@ -58,6 +60,17 @@ export default async function handler(req,res){
     if(path==='/api/auth/dev')return send(res,{error:'Тестовый вход отключён'},404);
     const bearer=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');const user=await currentUser(bearer);
     if(!user)return send(res,{error:'Необходимо войти через Telegram'},401);
+    if(path==='/api/admin/registrations/status'&&method==='POST'){
+      const body=await payload(req);
+      if(!await authorizedNotifier(user,body.initData))return send(res,{error:'Not found'},404);
+      return send(res,{admin:true,...await checkWebhook()});
+    }
+    if(path==='/api/admin/registrations/activate'&&method==='POST'){
+      const body=await payload(req);
+      if(!await authorizedNotifier(user,body.initData))return send(res,{error:'Not found'},404);
+      return send(res,{admin:true,...await activateWebhook()});
+    }
+    if(path.startsWith('/api/admin/'))return send(res,{error:'Not found'},404);
     if(path==='/api/me'&&method==='GET')return send(res,{...publicUser(user),...await stats(user)});
     if(path==='/api/me'&&method==='PATCH'){
       const u=await updateProfile(user,await payload(req));
