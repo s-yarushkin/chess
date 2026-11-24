@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHmac} from 'node:crypto';
 import {readFileSync} from 'node:fs';
-import {WEBHOOK_URL,webhookSecretFor,authorizedNotifier,activateWebhook,checkWebhook} from '../src/webhook-setup.js';
+import {WEBHOOK_URL,webhookSecretFor,authorizedNotifier,recipientState,activateWebhook,checkWebhook} from '../src/webhook-setup.js';
 const token='123456:FAKE-TEST-ONLY';
 const env={TG_BOT_TOKEN:token,REGISTRATION_ADMIN_CHAT_ID:'157957670',REGISTRATION_ADMIN_USERNAME:'sergeyyarushkin'};
 function sign(id,username){
@@ -23,16 +23,24 @@ test('webhook secret is derived from token but never equals token; explicit secr
  assert.equal(webhookSecretFor({...env,TG_WEBHOOK_SECRET:'bad secret'}),null);
  assert.equal(webhookSecretFor({}),null);
 });
-test('only the signed exact admin can manage the linked profile',async()=>{
+test('one-off merged account identifies admin by signed original Telegram ID, even if notification env missing',async()=>{
  const user={id:'abc',telegram_id:'222'};
- const db={query:async(_sql,args)=>({rowCount:args[0]==='157957670'&&args[1]==='abc'?1:0})};
- assert.equal(await authorizedNotifier(user,sign(157957670,'SergeyYarushkin'),{env,db}),true);
- assert.equal(await authorizedNotifier(user,sign(157957670,'OtherUser'),{env,db}),false);
+ const db={query:async(sql,args)=>{
+   assert.match(sql,/admin_account_merges/);
+   return {rowCount:args[0]==='157957670'&&args[1]==='abc'?1:0};
+ }};
+ const signed=sign(157957670,'SergeyYarushkin');
+ assert.equal(await authorizedNotifier(user,signed,{env,db}),true);
+ assert.equal(await authorizedNotifier(user,signed,{env:{TG_BOT_TOKEN:token},db}),true);
+ assert.equal(await authorizedNotifier(user,sign(157957670,'ChangedUsername'),{env,db}),true);
  assert.equal(await authorizedNotifier(user,sign(157957671,'SergeyYarushkin'),{env,db}),false);
- assert.equal(await authorizedNotifier({...user,id:'different'},sign(157957670,'SergeyYarushkin'),{env,db}),false);
+ assert.equal(await authorizedNotifier({...user,id:'different'},signed,{env,db}),false);
  assert.equal(await authorizedNotifier(user,'garbage',{env,db}),false);
- assert.equal(await authorizedNotifier(user,sign(157957670,'SergeyYarushkin'),{env:{},db}),false);
- assert.equal(await authorizedNotifier({...user,telegram_id:'157957670'},sign(157957670,'SergeyYarushkin'),{env,db}),true);
+ assert.equal(await authorizedNotifier(user,signed,{env:{},db}),false);
+ assert.equal(recipientState(signed,env).recipientReady,true);
+ assert.deepEqual(recipientState(signed,{TG_BOT_TOKEN:token}),{recipientReady:false,reason:'missing'});
+ assert.deepEqual(recipientState(signed,{...env,REGISTRATION_ADMIN_CHAT_ID:'12345'}),{recipientReady:false,reason:'mismatch'});
+ assert.deepEqual(recipientState(signed,{...env,REGISTRATION_ADMIN_USERNAME:'SomeoneElse'}),{recipientReady:false,reason:'mismatch'});
 });
 test('admin activation verifies chat and configures secret-token webhook',async()=>{
  const calls=[];
@@ -43,7 +51,7 @@ test('admin activation verifies chat and configures secret-token webhook',async(
    method==='getWebhookInfo'?{url:WEBHOOK_URL,pending_update_count:0}:true;
   return {ok:true,json:async()=>({ok:true,result})};
  };
- const result=await activateWebhook({env,fetcher});
+ const result=await activateWebhook({env,fetcher,expectedRecipientId:'157957670'});
  assert.equal(result.connected,true);
  assert.deepEqual(calls.map(c=>c.method),['getChat','setWebhook','getWebhookInfo']);
  assert.equal(calls[1].args.url,WEBHOOK_URL);
@@ -55,9 +63,10 @@ test('admin activation verifies chat and configures secret-token webhook',async(
 test('wrong private recipient or wrong webhook URL fails closed',async()=>{
  const wrong=async(url)=>({ok:true,json:async()=>({ok:true,result:url.endsWith('/getChat')?
   {id:157957670,type:'group',username:'SergeyYarushkin'}:true})});
- await assert.rejects(activateWebhook({env,fetcher:wrong}),/Личный чат/);
+ await assert.rejects(activateWebhook({env,fetcher:wrong,expectedRecipientId:'157957670'}),/Личный чат/);
+ await assert.rejects(activateWebhook({env,fetcher:wrong,expectedRecipientId:'999'}),/Получатель уведомлений/);
  const unavailable=async()=>{throw Error('Some private credentials');};
- await assert.rejects(activateWebhook({env,fetcher:unavailable}),/Telegram не отвечает/);
+ await assert.rejects(activateWebhook({env,fetcher:unavailable,expectedRecipientId:'157957670'}),/Telegram не отвечает/);
  const wrongWebhook=async()=>({ok:true,json:async()=>({ok:true,result:{url:'https://example.org/wrong'}})});
  const status=await checkWebhook({env,fetcher:wrongWebhook});
  assert.equal(status.connected,false);
@@ -71,5 +80,7 @@ test('frontend code does not disclose admin account or tokens',()=>{
  assert.match(ui,/\/api\/admin\/registrations\/'/);
  assert.match(api,/webhookSecretFor\(\)/);
  assert.match(api,/authorizedNotifier\(user,body\.initData\)/);
+ assert.match(api,/recipientState\(body\.initData\)/);
+ assert.match(ui,/REGISTRATION_ADMIN_CHAT_ID/);
  assert.match(api,/startsWith\('\/start'\)/);
 });
