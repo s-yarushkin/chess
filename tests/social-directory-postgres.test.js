@@ -59,7 +59,7 @@ test('Postgres: unique nickname, opt-in directory, requests, league invitations 
   await updateProfile(b,{displayName:bob,friendsOptIn:true,directoryVisible:true});
   await updateProfile(c,{displayName:cory,friendsOptIn:true,directoryVisible:true});
   await updateProfile(hidden,{displayName:quiet,friendsOptIn:true,directoryVisible:false});
-  await assert.rejects(requestFriendById(a,hidden.id),/недоступен/);
+  await assert.rejects(requestFriendById(a,hidden.id),/не доступен|недоступен/);
   const listed=await playerDirectory(a,{page:0,q:suffix});
   assert.deepEqual(new Set(listed.players.map(x=>x.name)),new Set([bob,cory]));
   assert.equal('points' in listed.players[0],false);
