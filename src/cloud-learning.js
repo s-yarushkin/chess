@@ -23,7 +23,7 @@ export function verifyTelegram(raw,token,now=Math.floor(Date.now()/1000)){
 export function normalizeNickname(s){
   if(typeof s!=='string')throw Error('Никнейм должен быть от 2 до 24 символов: буквы, цифры, _ или -');
   const trimmed=s.trim().normalize('NFKC');
-  if(!/^[A-Za-zА-Яа-яЁё0-9_-]{2,24}$/u.test(trimmed))
+  if(!/^[A-Za-zА-Яа-яЁё0-9_-]{2,24}$/u.test(trimmed)||!/[A-Za-zА-Яа-яЁё]/u.test(trimmed))
     throw Error('Никнейм должен быть от 2 до 24 символов: буквы, цифры, _ или -');
   return {name:trimmed,key:trimmed.toLocaleLowerCase('ru-RU')};
 }
