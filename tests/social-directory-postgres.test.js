@@ -33,7 +33,7 @@ test('UI and API connect nickname, friend requests, league invitation approval',
  for(const route of ['/api/players','/api/friends/requests/direct','/api/leagues/invitations',
   '/api/social/pending'])assert.ok(api.includes(route),route);
  assert.match(app,/loadPlayerDirectory/);
- assert.match(app,/respondLeagueInvitation|leagues\\/invitations/);
+ assert.ok(app.includes('/api/leagues/invitations/'));
  assert.match(db,/users_unique_nickname/);
  assert.match(db,/league_direct_invitations/);
 });
