@@ -87,16 +87,9 @@ export async function initDb(){
     await db.query('CREATE UNIQUE INDEX IF NOT EXISTS users_unique_nickname ON users(nickname_key) WHERE nickname_key IS NOT NULL');
     await db.query(`WITH eligible AS (
       SELECT u.id,lower(btrim(u.display_name)) AS nick,
-       ROW_NUMBER() OVER(PARTITION BY lower(btrim(u.display_name)) ORDER BY u.created_at,u.id) AS rn
+        ROW_NUMBER() OVER(PARTITION BY lower(btrim(u.display_name)) ORDER BY u.created_at,u.id) AS rn
       FROM users u
-      WHERE u.nickname_key IS NULL AND btrim(u.display_name) ~ '^[A-Za-zА-Яа-яЁё0-9_-]{2,24}
-    await db.query('CREATE INDEX IF NOT EXISTS idx_completions_recent_pg ON completions(user_id,solved_at DESC)');
-    return db;
-  })().catch(err=>{ready=null;throw err;});
-  return ready;
-}
-export async function tx(work){const client=await getPool().connect();try{await client.query('BEGIN');const result=await work(client);await client.query('COMMIT');return result;}catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}}
-
+      WHERE u.nickname_key IS NULL AND btrim(u.display_name) ~ '^[A-Za-zА-Яа-яЁё0-9_-]{2,24}$'
         AND NOT EXISTS(SELECT 1 FROM admin_account_merges m WHERE m.source_user_id=u.id)
     ) UPDATE users u SET nickname_key=e.nick FROM eligible e
     WHERE e.id=u.id AND e.rn=1
