@@ -29,7 +29,7 @@ export async function playerDirectory(user,{page=0,q=''}={}){
     WHERE u.id<>$1 AND u.directory_visible=TRUE AND u.friends_opt_in=TRUE
       AND u.nickname_key IS NOT NULL
       AND NOT EXISTS(SELECT 1 FROM admin_account_merges a WHERE a.source_user_id=u.id)
-      AND ($2='' OR u.nickname_key LIKE '%' || $2 || '%')
+      AND ($2='' OR POSITION($2 IN u.nickname_key)>0)
     ORDER BY u.nickname_key,u.id
     LIMIT 31 OFFSET $3\`,[user.id,search,p*30]);
  const hasMore=rows.rows.length>30;
