@@ -65,9 +65,9 @@ export async function updateProfile(user,body){
     const current=(await db.query('SELECT * FROM users WHERE id=$1 FOR UPDATE',[user.id])).rows[0];
     if(!current)throw Error('Необходимо войти через Telegram');
     const name=body.displayName===undefined?current.display_name:body.displayName;
-    const nick=normalizeNickname(name);
+    const nick=name?normalizeNickname(name):{name:'',key:null};
     const sharing=body.friendsOptIn===undefined?!!current.friends_opt_in:body.friendsOptIn;
-    const visible=sharing&&(body.directoryVisible===undefined?!!current.directory_visible:body.directoryVisible);
+    const visible=!!nick.key&&sharing&&(body.directoryVisible===undefined?!!current.directory_visible:body.directoryVisible);
     try{
       const r=await db.query(`UPDATE users SET display_name=$1,nickname_key=$2,
         friends_opt_in=$3,directory_visible=$4,leaderboard_opt_in=FALSE
