@@ -81,15 +81,13 @@ export async function initDb(){
       source_telegram_id TEXT NOT NULL UNIQUE,target_telegram_id TEXT NOT NULL,
       merged_at BIGINT NOT NULL,summary JSONB NOT NULL)`);
     await db.query('CREATE INDEX IF NOT EXISTS idx_admin_merge_requests_source ON admin_merge_requests(source_user_id,created_at DESC)');
-    // Public discovery is strictly opt-in, revealing only pseudonymous nicknames.
-    // Nullable nickname keys allow pre-existing duplicate/legacy profiles to keep
-    // their progress until the owner chooses a unique nickname.
+    // Nullable keys preserve existing duplicate accounts until nickname is changed.
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname_key TEXT');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS directory_visible BOOLEAN NOT NULL DEFAULT FALSE');
     await db.query('CREATE UNIQUE INDEX IF NOT EXISTS users_unique_nickname ON users(nickname_key) WHERE nickname_key IS NOT NULL');
     await db.query(`WITH eligible AS (
       SELECT u.id,lower(btrim(u.display_name)) AS nick,
-      ROW_NUMBER() OVER(PARTITION BY lower(btrim(u.display_name)) ORDER BY u.created_at,u.id) AS rn
+       ROW_NUMBER() OVER(PARTITION BY lower(btrim(u.display_name)) ORDER BY u.created_at,u.id) AS rn
       FROM users u
       WHERE u.nickname_key IS NULL AND btrim(u.display_name) ~ '^[A-Za-zА-Яа-яЁё0-9_-]{2,24}
     await db.query('CREATE INDEX IF NOT EXISTS idx_completions_recent_pg ON completions(user_id,solved_at DESC)');
@@ -99,10 +97,10 @@ export async function initDb(){
 }
 export async function tx(work){const client=await getPool().connect();try{await client.query('BEGIN');const result=await work(client);await client.query('COMMIT');return result;}catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}}
 
-      AND NOT EXISTS(SELECT 1 FROM admin_account_merges m WHERE m.source_user_id=u.id)
+        AND NOT EXISTS(SELECT 1 FROM admin_account_merges m WHERE m.source_user_id=u.id)
     ) UPDATE users u SET nickname_key=e.nick FROM eligible e
     WHERE e.id=u.id AND e.rn=1
-    AND NOT EXISTS(SELECT 1 FROM users taken WHERE taken.nickname_key=e.nick)`);
+      AND NOT EXISTS(SELECT 1 FROM users taken WHERE taken.nickname_key=e.nick)`);
     await db.query('CREATE INDEX IF NOT EXISTS idx_users_directory ON users(directory_visible,nickname_key) WHERE directory_visible=TRUE');
     await db.query(`CREATE TABLE IF NOT EXISTS league_direct_invitations (
       id UUID PRIMARY KEY,league_id UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
