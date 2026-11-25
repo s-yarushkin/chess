@@ -40,8 +40,8 @@ test('first saved nickname triggers registration once even with concurrent reque
  try{
   const u=(await db.query('SELECT * FROM users WHERE id=$1',[id])).rows[0];
   const before=await updateProfile(u,{friendsOptIn:false});assert.equal(before.firstRegistration,false);
-  const [a,b]=await Promise.all([updateProfile(u,{displayName:'Тестовый игрок'}),updateProfile(u,{displayName:'Другой ник'})]);
+  const [a,b]=await Promise.all([updateProfile(u,{displayName:'ТестовыйИгрок'}),updateProfile(u,{displayName:'ДругойНик'})]);
   assert.equal(Number(a.firstRegistration)+Number(b.firstRegistration),1);
-  assert.equal((await updateProfile(u,{displayName:'Новый ник'})).firstRegistration,false);
+  assert.equal((await updateProfile(u,{displayName:'НовыйНик'})).firstRegistration,false);
  }finally{await db.query('DELETE FROM users WHERE id=$1',[id]);}
 });

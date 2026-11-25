@@ -19,8 +19,16 @@ export function verifyTelegram(raw,token,now=Math.floor(Date.now()/1000)){
   // Public sign-in: verify Telegram signature and freshness, but do not restrict account IDs.
   return {telegramId:String(u.id),suggestedName:String(u.first_name||'').slice(0,50)};
 }
-export function validName(s){return typeof s==='string'&&s.trim().length>=2&&s.trim().length<=30&&!/[<>\x00-\x1f]/.test(s);}
-export const publicUser=u=>({id:u.id,displayName:u.display_name,leaderboardOptIn:false,friendsOptIn:!!u.friends_opt_in,points:u.points,solved:u.solved_count,skillRating:u.skill_rating});
+// Nickname only: no spaces/full names, contacts or URLs in a children's directory.
+export function normalizeNickname(s){
+  if(typeof s!=='string')throw Error('Никнейм должен быть от 2 до 24 символов: буквы, цифры, _ или -');
+  const trimmed=s.trim().normalize('NFKC');
+  if(!/^[A-Za-zА-Яа-яЁё0-9_-]{2,24}$/u.test(trimmed)||!/[A-Za-zА-Яа-яЁё]/u.test(trimmed))
+    throw Error('Никнейм должен быть от 2 до 24 символов: буквы, цифры, _ или -');
+  return {name:trimmed,key:trimmed.toLocaleLowerCase('ru-RU')};
+}
+export const validName=s=>{try{normalizeNickname(s);return true;}catch{return false;}};
+export const publicUser=u=>({id:u.id,displayName:u.display_name,leaderboardOptIn:false,friendsOptIn:!!u.friends_opt_in,directoryVisible:!!u.directory_visible,points:u.points,solved:u.solved_count,skillRating:u.skill_rating});
 export async function authenticateTelegram(raw){
   const {telegramId,suggestedName}=verifyTelegram(raw,process.env.TG_BOT_TOKEN);
   const now=Date.now(),userId=randomUUID();
@@ -49,17 +57,27 @@ export async function currentUser(bearer){
    WHERE s.token_hash=$1 AND s.expires_at>$2`,[hash,Date.now()]);return r.rows[0]||null;
 }
 export async function updateProfile(user,body){
-  if(body.displayName!==undefined && !validName(body.displayName))throw Error('Имя от 2 до 30 символов');
+  if(body.displayName!==undefined)normalizeNickname(body.displayName);
   if(body.friendsOptIn!==undefined && typeof body.friendsOptIn!=='boolean')throw Error('Неверное значение настройки друзей');
+  if(body.directoryVisible!==undefined && typeof body.directoryVisible!=='boolean')throw Error('Неверная настройка каталога');
   if(body.leaderboardOptIn===true)throw Error('Общий рейтинг отключён');
   return tx(async db=>{
     const current=(await db.query('SELECT * FROM users WHERE id=$1 FOR UPDATE',[user.id])).rows[0];
     if(!current)throw Error('Необходимо войти через Telegram');
-    const name=body.displayName===undefined?current.display_name:body.displayName.trim();
+    const name=body.displayName===undefined?current.display_name:body.displayName;
+    const nick=name?normalizeNickname(name):{name:'',key:null};
     const sharing=body.friendsOptIn===undefined?!!current.friends_opt_in:body.friendsOptIn;
-    const r=await db.query('UPDATE users SET display_name=$1,friends_opt_in=$2,leaderboard_opt_in=FALSE WHERE id=$3 RETURNING *',[name,sharing,current.id]);
-    // Only the first completed profile is a registration, including concurrent PATCH requests.
-    return {...r.rows[0],firstRegistration:!current.display_name&&!!name};
+    const visible=!!nick.key&&sharing&&(body.directoryVisible===undefined?!!current.directory_visible:body.directoryVisible);
+    try{
+      const r=await db.query(`UPDATE users SET display_name=$1,nickname_key=$2,
+        friends_opt_in=$3,directory_visible=$4,leaderboard_opt_in=FALSE
+        WHERE id=$5 RETURNING *`,[nick.name,nick.key,sharing,visible,current.id]);
+      return {...r.rows[0],firstRegistration:!current.display_name&&!!nick.name};
+    }catch(e){
+      if(e.code==='23505'&&e.constraint==='users_unique_nickname')
+        throw Error('Этот никнейм уже занят. Выбери другой.');
+      throw e;
+    }
   });
 }
 export async function stats(user){

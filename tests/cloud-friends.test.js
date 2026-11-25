@@ -31,6 +31,6 @@ test('friend routes, opt-in and storage wired without public search',()=>{
  assert.ok(db.includes('CREATE TABLE IF NOT EXISTS friend_invites'));
  assert.ok(db.includes('CREATE TABLE IF NOT EXISTS friendships'));
  assert.ok(profile.includes('friendsOptIn:!!u.friends_opt_in'));
- assert.ok(profile.includes('friends_opt_in=$2'));
+ assert.ok(profile.includes('friends_opt_in=$3'));
  assert.equal(api.includes('/api/users/search'),false);
 });

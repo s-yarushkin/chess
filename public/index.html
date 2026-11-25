@@ -48,41 +48,62 @@
       <div class="foot"><button class="badges-link" id="badgesLink">🏅 Достижения <b id="badgeCount">0</b></button><span id="status">Не авторизован</span></div>
     </aside>
   </main>
-  <dialog id="profile" class="dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>Мой профиль</h2><p id="firstTimeWelcome">Добро пожаловать! Этот шахматный тренажёр запустили 8-летний Алексей и его папа Сергей. Напиши своё имя или никнейм — и начинай играть!</p><label for="name">Имя или никнейм</label><input type="text" id="name" maxlength="30" minlength="2" autocomplete="nickname" placeholder="Например, Лёша" required><label class="check"><input id="friendsOptIn" type="checkbox"> Делиться прогрессом с подтверждёнными друзьями и участниками моих лиг</label><small>Для безопасности используй короткий никнейм. Не указывай фамилию, школу, телефон или адрес. Прогресс видят только подтверждённые друзья и участники лиг, куда тебя одобрил создатель. Отключи галочку — и он станет невидимым.</small><button type="button" class="button primary" id="saveProfile">Сохранить</button><p id="profileError"></p></form></dialog>
+  <dialog id="profile" class="dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>Мой профиль</h2><p id="firstTimeWelcome">Добро пожаловать! Этот шахматный тренажёр запустили 8-летний Алексей и его папа Сергей. Напиши своё имя или никнейм — и начинай играть!</p><label for="name">Уникальный никнейм</label><input type="text" id="name" maxlength="24" minlength="2" autocomplete="nickname" placeholder="Например, КоньЛёша" required><small>От 2 до 24 символов: буквы, цифры, _ и -. Нужна хотя бы одна буква. Никнейм нельзя повторить у другого игрока.</small><label class="check"><input id="friendsOptIn" type="checkbox"> Делиться прогрессом с подтверждёнными друзьями и участниками моих лиг</label><label class="check"><input id="directoryVisible" type="checkbox"> Показывать мой никнейм в списке игроков</label><small>В каталоге виден только никнейм, без баллов, школы, телефона и Telegram-аккаунта. Показ добровольный. Прогресс видят только подтверждённые друзья и участники лиг. Не указывай фамилию и личные сведения.</small><button type="button" class="button primary" id="saveProfile">Сохранить</button><p id="profileError"></p></form></dialog>
   <dialog id="auth" class="dialog"><div><h2>Добро пожаловать!</h2><p>«Шахматная академия» — тренажёр для обучения шахматам, который запустили 8-летний Алексей и его папа Сергей. Открой игру через Telegram, выбери имя и решай задачи!</p><a class="auth-bot-link" href="https://t.me/Chess_by_Alex_bot" target="_blank" rel="noopener noreferrer" aria-label="Открыть шахматного бота в Telegram">Открыть бота в Telegram ↗</a><p class="auth-bot-help">В боте нажми «Играть в шахматы». Там можно войти и сохранять прогресс.</p><div id="devLogin" hidden><label for="devName">Локальный тестовый вход</label><input id="devName" placeholder="Имя тестового игрока" minlength="2" maxlength="30"><button class="button primary" id="devEnter">Войти (только локально)</button></div><p id="authError"></p></div></dialog>
-  <dialog id="friends" class="dialog friends-dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>🤝 Шахматный отряд</h2><p>У каждого свой темп! Смотри, чему научились друзья за последние 7 дней. Здесь нет общего рейтинга, чата и поиска незнакомцев.</p>
+  <dialog id="friends" class="dialog friends-dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button><h2>🤝 Шахматный отряд</h2><p>Найди одноклассника по никнейму и отправь запрос. Друг сам решит, принять его или нет. В каталоге нет общих рейтингов, телефона и чата.</p>
     <div class="friend-status" id="friendStatus">Загружаем...</div>
+    <section class="directory-section">
+      <h3>Игроки академии</h3>
+      <label for="playerSearch" class="visually-hidden">Поиск игрока по никнейму</label>
+      <input type="search" id="playerSearch" placeholder="Найти по никнейму" maxlength="24" autocomplete="off">
+      <div id="directoryList" class="friends-list" aria-live="polite"></div>
+      <div class="directory-pages">
+        <button class="button outline" type="button" id="directoryPrevious">Назад</button>
+        <span id="directoryPage">Страница 1</span>
+        <button class="button outline" type="button" id="directoryNext">Далее</button>
+      </div>
+    </section>
+    <details class="legacy-invites"><summary>Пригласить по старому коду</summary>
     <div class="friend-actions" id="friendActions">
       <button type="button" class="button soft" id="createFriendCode">Создать код приглашения</button>
       <div class="code-row"><input id="friendCode" type="text" placeholder="Код от друга" maxlength="24" autocomplete="off" aria-label="Код приглашения"><button type="button" class="button primary" id="joinFriend">Отправить запрос</button></div>
       <div class="invite-result" id="inviteResult" hidden></div>
-    </div>
+    </div></details>
     <h3>Мои друзья</h3><div class="friends-list" id="friendsList"></div>
     <h3>Запросы в друзья</h3><div class="friends-list" id="friendRequests"></div>
-    <small>Приглашение действительно 48 часов и используется один раз. После обмена кодом оба игрока подтверждают дружбу. Любого друга можно удалить.</small>
+    <small>Никнеймы других игроков видны только с их согласия. Запрос дружбы можно отклонить; прогресс открывается после подтверждения. Старые коды сохранены как запасной способ.</small>
   </form></dialog>
   <dialog id="leagues" class="dialog league-dialog"><form method="dialog">
     <button class="close" aria-label="Закрыть">×</button>
     <h2>🏆 Шахматные лиги</h2>
-    <p>Создай свою команду, пригласи знакомых и одобряй заявки. В недельный зачёт идут первые 8 новых задач каждого игрока.</p>
+    <p>Создай лигу, выбери участников из каталога и отправь приглашения. Они смогут принять или отклонить. В недельный зачёт идут первые 8 новых задач.</p>
+    <h3>Меня пригласили</h3><div id="leagueInbox" class="friends-list" aria-live="polite"></div>
     <div class="league-actions">
       <label for="leagueName">Название новой лиги</label>
       <div class="code-row"><input id="leagueName" type="text" minlength="2" maxlength="36" placeholder="Например, Летающие кони" autocomplete="off"><button type="button" class="button primary" id="createLeague">Создать</button></div>
-      <label for="leagueCode">Есть код приглашения?</label>
-      <div class="code-row"><input id="leagueCode" type="text" maxlength="24" placeholder="Вставь код от знакомого" autocomplete="off"><button type="button" class="button primary" id="joinLeague">Подать заявку</button></div>
+      <details class="legacy-invites"><summary>Вступить по старому коду</summary><label for="leagueCode">Есть код приглашения?</label>
+      <div class="code-row"><input id="leagueCode" type="text" maxlength="24" placeholder="Вставь код от знакомого" autocomplete="off"><button type="button" class="button primary" id="joinLeague">Подать заявку</button></div></details>
     </div>
     <h3>Мои лиги</h3><div id="leagueList" class="friends-list"></div>
     <div id="leagueDetail" class="league-detail" hidden>
       <h3 id="leagueTitle"></h3>
       <p id="leagueSummary"></p>
-      <div id="leagueAdmin" hidden><button type="button" class="button soft" id="createLeagueCode">Создать код для приглашения</button>
-        <div id="leagueInvite" class="invite-result" hidden></div>
+      <div id="leagueAdmin" hidden>
+        <h3>Пригласить игроков</h3>
+        <label for="leaguePlayerSearch">Найти игроков по никнейму</label>
+        <input id="leaguePlayerSearch" type="search" placeholder="Поиск в каталоге" maxlength="24" autocomplete="off">
+        <div id="leaguePlayerCandidates" class="friends-list" aria-label="Выбор участников для приглашения"></div>
+        <button class="button primary" type="button" id="sendLeagueInvitations">Пригласить выбранных</button>
+        <p id="leagueInviteStatus" role="status"></p>
+        <details class="legacy-invites"><summary>Пригласить по старому коду</summary>
+        <button type="button" class="button soft" id="createLeagueCode">Создать код для приглашения</button>
+        <div id="leagueInvite" class="invite-result" hidden></div></details>
         <h3>Заявки на вступление</h3><div id="leagueRequests" class="friends-list"></div>
       </div>
       <h3>Недельные результаты</h3><div id="leagueMembers" class="friends-list"></div>
       <button type="button" class="button outline" id="leaveLeague">Выйти или закрыть лигу</button>
     </div>
-    <small>Нет публичного поиска лиг, чатов и данных о школе. Присоединение только по коду и после одобрения создателем. Лимит — 20 участников.</small>
+    <small>В лигу можно вступить только по собственному подтверждению приглашения или одобренной заявке. Переписок и сведений о школе нет. Лимит — 20 участников.</small>
   </form></dialog>
   <dialog id="donateDialog" class="dialog donate-dialog" aria-labelledby="donateHeading">
     <form method="dialog"><button class="close" aria-label="Закрыть">×</button></form>

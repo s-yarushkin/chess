@@ -142,6 +142,8 @@ async function refreshMe(){
  $('firstTimeWelcome').hidden=!!me.displayName;
  $('friendsOptIn').checked=me.friendsOptIn;
  $('friendsOptIn').disabled=!state.features.friendsEnabled;
+ $('directoryVisible').checked=!!me.directoryVisible;
+ $('directoryVisible').disabled=!me.friendsOptIn;
  $('streak').textContent=me.game.streak;
  const p=me.game.progress;$('levelName').textContent=`Уровень ${me.game.level} · ${me.game.levelName}`;
  $('levelCount').textContent=p.target?`${p.current}/${p.target}`:'Максимальный уровень';
@@ -229,6 +231,42 @@ async function changeMode(mode){
  await newPuzzle();
 }
 const messageNode=(tag,text,cls='')=>{const el=document.createElement(tag);el.textContent=text;if(cls)el.className=cls;return el;};
+let directoryPage=0,directoryHasMore=false,directoryTimer=0;
+async function updateSocialBadges(){
+ try{
+  const counts=await api('/api/social/pending');
+  for(const [mode,label] of [['friends','🤝 Друзья'],['leagues','🏆 Лиги']]){
+   const tab=document.querySelector('.tab[data-mode="'+mode+'"]');
+   if(tab)tab.textContent=label+(counts[mode]>0?' ('+counts[mode]+')':'');
+  }
+ }catch{/* Never block chess over a badge. */}
+}
+async function loadPlayerDirectory(){
+ const data=await api('/api/players?page='+directoryPage+'&q='+encodeURIComponent($('playerSearch').value.trim()));
+ const list=$('directoryList');list.replaceChildren();
+ directoryHasMore=data.hasMore;
+ $('directoryPrevious').disabled=directoryPage===0;
+ $('directoryNext').disabled=!data.hasMore;
+ $('directoryPage').textContent='Страница '+(directoryPage+1);
+ for(const player of data.players){
+  const row=messageNode('div','','friend-row directory-row');
+  row.append(messageNode('span',player.name,'directory-name'));
+  const label=player.isFriend?'Вы уже друзья':player.requestSent?'Запрос отправлен':
+   player.requestReceived?'Приглашает тебя':'Добавить в друзья';
+  const button=messageNode('button',label,'button '+(player.isFriend||player.requestSent?'outline':'primary'));
+  button.type='button';
+  button.disabled=!state.me?.friendsOptIn||player.isFriend||player.requestSent||player.requestReceived;
+  if(!button.disabled)button.addEventListener('click',async()=>{
+   button.disabled=true;
+   try{
+    await api('/api/friends/requests/direct',{method:'POST',body:JSON.stringify({playerId:player.id})});
+    toast('Запрос отправлен!');await refreshFriends();
+   }catch(e){toast(e.message);button.disabled=false;}
+  });
+  row.append(button);list.append(row);
+ }
+ if(!data.players.length)list.append(messageNode('p','Игроки не найдены. Можно попросить друга включить показ никнейма в профиле.'));
+}
 async function openFriends(){
  $('friends').showModal();await refreshFriends();
 }
@@ -236,7 +274,8 @@ async function refreshFriends(){
  try{
   const result=await api('/api/friends');
   $('friendActions').hidden=!result.enabled;
-  $('friendStatus').textContent=result.enabled?'✅ Закрытый круг включён. Показываются только подтверждённые друзья.':'Обмен выключен. Включи его в профиле, чтобы добавлять друзей.';
+  $('friendStatus').textContent=result.enabled?'Прогресс видят только подтверждённые друзья.':'Каталог доступен, но для запросов включи обмен прогрессом в профиле.';
+  await loadPlayerDirectory();
   const list=$('friendsList');list.replaceChildren();
   for(const friend of result.friends){
    const row=messageNode('div','','friend-row');
@@ -257,6 +296,7 @@ async function refreshFriends(){
   }
   for(const outgoing of result.outgoing)requests.append(messageNode('p',`⏳ Запрос для «${outgoing.name}» ожидает подтверждения.`));
   if(!result.incoming.length&&!result.outgoing.length)requests.append(messageNode('p','Новых запросов нет.'));
+  await updateSocialBadges();
  }catch(e){$('friendStatus').textContent=e.message;}
 }
 
@@ -267,10 +307,47 @@ const leagueActionButton=(label,callback,kind='outline')=>{
   b.addEventListener('click',async()=>{try{b.disabled=true;await callback();}catch(e){toast(e.message);}finally{b.disabled=false;}});
   return b;
 };
+let leagueSelected=new Set(),currentLeagueMembers=new Set(),leagueSearchTimer=0;
+async function refreshLeagueInbox(){
+ const list=$('leagueInbox');list.replaceChildren();
+ const inbox=await api('/api/leagues/invitations');
+ for(const inv of inbox.invitations){
+  const row=messageNode('div','','league-row');
+  row.append(messageNode('span','«'+inv.leagueName+'» · от '+inv.ownerName));
+  const actions=document.createElement('div');
+  for(const [action,label] of [['accept','Принять'],['decline','Отклонить']]){
+   actions.append(leagueActionButton(label,async()=>{
+    await api('/api/leagues/invitations/'+inv.id+'/'+action,{method:'POST',body:'{}'});
+    toast(action==='accept'?'Ты вступил в лигу!':'Приглашение отклонено');
+    await refreshLeagueInbox();await refreshLeagues();await updateSocialBadges();
+   },action==='accept'?'primary':'outline'));
+  }
+  row.append(actions);list.append(row);
+ }
+ if(!inbox.invitations.length)list.append(messageNode('p','Новых приглашений нет.'));
+}
+async function loadLeagueCandidates(){
+ if(!activeLeagueId)return;
+ const list=$('leaguePlayerCandidates');list.replaceChildren();
+ const data=await api('/api/players?page=0&q='+encodeURIComponent($('leaguePlayerSearch').value.trim()));
+ for(const player of data.players){
+  if(currentLeagueMembers.has(player.id))continue;
+  const row=messageNode('label','','league-pick-row');
+  const input=document.createElement('input');
+  input.type='checkbox';input.value=player.id;input.checked=leagueSelected.has(player.id);
+  input.addEventListener('change',()=>{
+   if(input.checked)leagueSelected.add(player.id);else leagueSelected.delete(player.id);
+   $('sendLeagueInvitations').textContent='Пригласить выбранных ('+leagueSelected.size+')';
+  });
+  row.append(input,messageNode('span',player.name));list.append(row);
+ }
+ if(!list.childElementCount)list.append(messageNode('p','Игроки не найдены. В каталоге только участники, включившие показ никнейма.'));
+ $('sendLeagueInvitations').textContent='Пригласить выбранных ('+leagueSelected.size+')';
+}
 async function openLeagues(){
-  if(!state.me)return;
-  $('leagues').showModal();
-  await refreshLeagues();
+ if(!state.me)return;
+ $('leagues').showModal();
+ await refreshLeagueInbox();await refreshLeagues();await updateSocialBadges();
 }
 async function refreshLeagues(){
   const list=$('leagueList');list.replaceChildren();
@@ -298,12 +375,15 @@ async function refreshLeagues(){
 }
 async function showLeague(id){
   const details=await api('/api/leagues/'+encodeURIComponent(id));
+  if(activeLeagueId!==id){leagueSelected=new Set();$('leaguePlayerSearch').value='';}
   activeLeagueId=id;
   $('leagueDetail').hidden=false;
   $('leagueTitle').textContent=details.name;
   $('leagueSummary').textContent=details.memberCount+'/20 участников · рейтинг за 7 дней · первые '+details.weeklyLimit+' задач каждого';
   $('leagueAdmin').hidden=!details.isOwner;
   $('leagueInvite').hidden=true;
+  currentLeagueMembers=new Set(details.members.map(x=>x.id));
+  if(details.isOwner)await loadLeagueCandidates();
   const pending=$('leagueRequests');pending.replaceChildren();
   if(details.isOwner){
     if(!details.requests.length)pending.append(messageNode('p','Новых заявок нет.'));
@@ -352,13 +432,30 @@ async function begin(){
    state.token=login.token;sessionStorage.setItem('chess_session',state.token);if(telegramId)sessionStorage.setItem('chess_session_tg',telegramId);
   }else{if(config.demo)$('devLogin').hidden=false;$('auth').showModal();return;}}
   await refreshMe();await syncCatalog();if(!state.me.displayName){$('profile').showModal();return;}await resumePuzzle();
+  void updateSocialBadges();
  }catch(e){sessionStorage.removeItem('chess_session');state.token='';$('authError').textContent=e.message;$('auth').showModal();}
 }
 $('devEnter').addEventListener('click',async()=>{try{const login=await api('/api/auth/dev',{method:'POST',body:JSON.stringify({name:$('devName').value})});
  state.token=login.token;sessionStorage.setItem('chess_session',state.token);$('auth').close();await refreshMe();await newPuzzle();
  }catch(e){$('authError').textContent=e.message;}});
-$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,friendsOptIn:state.features.friendsEnabled&&$('friendsOptIn').checked})});
+$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,friendsOptIn:state.features.friendsEnabled&&$('friendsOptIn').checked,directoryVisible:state.features.friendsEnabled&&$('friendsOptIn').checked&&$('directoryVisible').checked})});
  $('profile').close();await refreshMe();if(!state.attempt)await newPuzzle();}catch(e){$('profileError').textContent=e.message;}});
+$('friendsOptIn').addEventListener('change',()=>{
+ $('directoryVisible').disabled=!$('friendsOptIn').checked;
+ if(!$('friendsOptIn').checked)$('directoryVisible').checked=false;
+});
+$('playerSearch').addEventListener('input',()=>{
+ directoryPage=0;clearTimeout(directoryTimer);
+ directoryTimer=setTimeout(()=>loadPlayerDirectory().catch(e=>toast(e.message)),250);
+});
+$('directoryPrevious').addEventListener('click',()=>{
+ directoryPage=Math.max(0,directoryPage-1);
+ void loadPlayerDirectory().catch(e=>toast(e.message));
+});
+$('directoryNext').addEventListener('click',()=>{
+ if(directoryHasMore)directoryPage++;
+ void loadPlayerDirectory().catch(e=>toast(e.message));
+});
 $('createFriendCode').addEventListener('click',async()=>{try{const d=await api('/api/friends/invitations',{method:'POST',body:'{}'});
   const code=$('inviteResult');code.hidden=false;code.textContent='Код для друга: '+d.code+' · 48 часов. Передавай только знакомым.';
   if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(d.code).then(()=>toast('Код скопирован')).catch(()=>{});}
@@ -381,6 +478,22 @@ $('joinLeague').addEventListener('click',async()=>{
     const data=await api('/api/leagues/join',{method:'POST',body:JSON.stringify({code})});
     $('leagueCode').value='';toast('Заявка отправлена в лигу «'+data.leagueName+'»');
   }catch(e){toast(e.message);}
+});
+$('leaguePlayerSearch').addEventListener('input',()=>{
+ clearTimeout(leagueSearchTimer);
+ leagueSearchTimer=setTimeout(()=>loadLeagueCandidates().catch(e=>toast(e.message)),250);
+});
+$('sendLeagueInvitations').addEventListener('click',async()=>{
+ if(!activeLeagueId||!leagueSelected.size){toast('Отметь игроков для приглашения');return;}
+ const button=$('sendLeagueInvitations');button.disabled=true;
+ try{
+  const result=await api('/api/leagues/'+activeLeagueId+'/invitations',{
+   method:'POST',body:JSON.stringify({playerIds:[...leagueSelected]})
+  });
+  leagueSelected.clear();
+  $('leagueInviteStatus').textContent=result.message+' Отправлено: '+result.sent+'.';
+  await loadLeagueCandidates();
+ }catch(e){toast(e.message);}finally{button.disabled=false;}
 });
 $('createLeagueCode').addEventListener('click',async()=>{
   if(!activeLeagueId)return;
