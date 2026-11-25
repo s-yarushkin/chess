@@ -13,7 +13,8 @@ test('Postgres: approval-only entry, private standings, weekly cap, removal', {s
  const member={id:ids[1],display_name:'Конь',friends_opt_in:true};
  const outsider={id:ids[2],display_name:'Посторонний',friends_opt_in:false};
  try{
-  await assert.rejects(createLeague(outsider,'Посторонние'),/включи обмен/);
+  const privateLeague=await createLeague(outsider,'Посторонние');
+  await closeLeague(outsider,privateLeague.id);
   const l=await createLeague(owner,'Летающие кони');
   assert.equal((await listLeagues(member)).leagues.length,0);
   const invite=await inviteToLeague(owner,l.id);
@@ -36,7 +37,7 @@ test('Postgres: approval-only entry, private standings, weekly cap, removal', {s
   assert.equal(standing.weeklyPoints,16);
   await assert.rejects(leaveOrRemoveLeagueMember(outsider,l.id,ids[1]),/только создатель/);
   await db.query('UPDATE users SET friends_opt_in=FALSE WHERE id=$1',[ids[1]]);
-  assert.ok(!(await leagueDetails(owner,l.id)).members.some(x=>x.id===ids[1]));
+  assert.equal((await leagueDetails(owner,l.id)).members.find(x=>x.id===ids[1]).weeklyPoints,null);
   assert.equal((await leaveOrRemoveLeagueMember(owner,l.id,ids[1])).removed,true);
   assert.deepEqual(await closeLeague(owner,l.id),{closed:true});
  }finally{

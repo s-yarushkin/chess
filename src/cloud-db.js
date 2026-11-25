@@ -83,7 +83,8 @@ export async function initDb(){
     await db.query('CREATE INDEX IF NOT EXISTS idx_admin_merge_requests_source ON admin_merge_requests(source_user_id,created_at DESC)');
     // Nullable keys preserve existing duplicate accounts until nickname is changed.
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname_key TEXT');
-    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS directory_visible BOOLEAN NOT NULL DEFAULT FALSE');
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS directory_visible BOOLEAN NOT NULL DEFAULT TRUE');
+    await db.query('ALTER TABLE users ALTER COLUMN directory_visible SET DEFAULT TRUE');
     await db.query('CREATE UNIQUE INDEX IF NOT EXISTS users_unique_nickname ON users(nickname_key) WHERE nickname_key IS NOT NULL');
     await db.query(`WITH eligible AS (
       SELECT u.id,lower(btrim(u.display_name)) AS nick,
@@ -94,6 +95,19 @@ export async function initDb(){
     ) UPDATE users u SET nickname_key=e.nick FROM eligible e
     WHERE e.id=u.id AND e.rn=1
       AND NOT EXISTS(SELECT 1 FROM users taken WHERE taken.nickname_key=e.nick)`);
+    // One-time rollout for the small existing test cohort.
+    await tx(async client=>{
+      await client.query("SELECT pg_advisory_xact_lock(73522,1)");
+      await client.query("CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY)");
+      const migration=await client.query("INSERT INTO schema_migrations(name) VALUES('directory-default-visible-v1') ON CONFLICT DO NOTHING RETURNING name");
+      if(migration.rowCount){
+        await client.query(`UPDATE users u SET directory_visible=TRUE
+          WHERE u.nickname_key IS NOT NULL
+            AND NOT EXISTS(SELECT 1 FROM admin_account_merges m WHERE m.source_user_id=u.id)
+            AND (SELECT COUNT(*) FROM users v WHERE v.display_name<>'' AND NOT EXISTS
+              (SELECT 1 FROM admin_account_merges m WHERE m.source_user_id=v.id))<=12`);
+      }
+    });
     await db.query('CREATE INDEX IF NOT EXISTS idx_users_directory ON users(directory_visible,nickname_key) WHERE directory_visible=TRUE');
     await db.query(`CREATE TABLE IF NOT EXISTS league_direct_invitations (
       id UUID PRIMARY KEY,league_id UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
