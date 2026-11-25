@@ -15,7 +15,7 @@ export async function invitePlayersToLeague(owner,leagueId,userIds,now=Date.now(
   const league=(await db.query('SELECT * FROM leagues WHERE id=$1 FOR UPDATE',[leagueId])).rows[0];
   if(!league||!league.active||league.owner_id!==owner.id)throw Error('Приглашать может только создатель лиги');
   const self=(await db.query('SELECT friends_opt_in,display_name FROM users WHERE id=$1',[owner.id])).rows[0];
-  if(!self?.friends_opt_in||!self.display_name)throw Error('Включи обмен прогрессом в профиле');
+  if(!self?.display_name)throw Error('Укажи никнейм в профиле');
   const current=await count(db,
     'SELECT COUNT(*)::int AS n FROM league_direct_invitations d JOIN leagues l ON l.id=d.league_id WHERE l.owner_id=$1 AND d.created_at>$2',
     [owner.id,now-DAY]);
@@ -26,7 +26,7 @@ export async function invitePlayersToLeague(owner,leagueId,userIds,now=Date.now(
     `SELECT id,display_name,nickname_key,directory_visible,friends_opt_in FROM users
      WHERE id=ANY($1::uuid[]) FOR UPDATE`,[userIds])).rows;
   if(candidates.length!==userIds.length||candidates.some(u=>u.id===owner.id||
-    !u.directory_visible||!u.friends_opt_in||!u.nickname_key))
+    !u.directory_visible||!u.nickname_key))
     throw Error('Некоторые игроки недоступны для приглашения');
   let sent=0,already=0;
   for(const id of userIds){
@@ -48,7 +48,7 @@ export async function invitePlayersToLeague(owner,leagueId,userIds,now=Date.now(
  });
 }
 export async function leagueInvitationInbox(user){
- if(!user.friends_opt_in)return {enabled:false,invitations:[]};
+ if(!user?.id)return {enabled:false,invitations:[]};
  const data=await getPool().query(
   `SELECT d.id,d.league_id AS "leagueId",l.name AS "leagueName",u.display_name AS "ownerName"
    FROM league_direct_invitations d JOIN leagues l ON l.id=d.league_id
@@ -71,7 +71,7 @@ export async function respondLeagueInvitation(user,invitationId,accept,now=Date.
   if(!l?.active||!invite)throw Error('Приглашение больше недействительно');
   if(accept){
     const profile=(await db.query('SELECT id,display_name,friends_opt_in FROM users WHERE id=$1 FOR UPDATE',[user.id])).rows[0];
-    if(!profile?.display_name||!profile.friends_opt_in)throw Error('Для лиги включи обмен прогрессом в профиле');
+    if(!profile?.display_name)throw Error('Для лиги укажи никнейм в профиле');
     const memberCount=await count(db,'SELECT COUNT(*)::int AS n FROM league_members WHERE league_id=$1',[l.id]);
     if(memberCount>=LEAGUE_MEMBER_LIMIT)throw Error('Лига уже заполнена');
     const leagueCount=await count(db,
@@ -88,7 +88,7 @@ export async function respondLeagueInvitation(user,invitationId,accept,now=Date.
  });
 }
 export async function socialPendingCounts(user){
- if(!user?.friends_opt_in)return {friends:0,leagues:0};
+ if(!user?.id)return {friends:0,leagues:0};
  const r=await getPool().query(
  `SELECT
    (SELECT COUNT(*)::int FROM friend_requests r WHERE r.recipient_id=$1 AND r.status='pending') AS friends,

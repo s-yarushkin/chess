@@ -57,7 +57,7 @@ export async function respondFriend(user,id,accept,now=Date.now()){
   if(accept){
    const profiles=(await db.query('SELECT id,display_name,friends_opt_in FROM users WHERE id=ANY($1::uuid[]) FOR UPDATE',[[user.id,req.requester_id]])).rows;
    if(profiles.length!==2)throw Error('Аккаунт друга недоступен');
-   for(const p of profiles)requireSharing(p);
+   for(const p of profiles)if(!p.display_name)throw Error('Укажи никнейм в профиле');
    for(const id of [user.id,req.requester_id])if(await countFriends(db,id)>=MAX_FRIENDS)throw Error('Список друзей заполнен');
    const [a,b]=friendPair(user.id,req.requester_id);
    await db.query('INSERT INTO friendships(user_a,user_b,created_at) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[a,b,now]);
@@ -73,20 +73,20 @@ export async function removeFriend(user,otherId){
  return {removed:r.rowCount>0};
 }
 export async function friendsSnapshot(user,now=Date.now()){
- if(!user.friends_opt_in)return {enabled:false,friends:[],incoming:[],outgoing:[],privacy:'Обмен выключен. Друзья не видят твой прогресс.'};
+ if(!user?.id)return {enabled:false,friends:[],incoming:[],outgoing:[],privacy:'Обмен выключен. Друзья не видят твой прогресс.'};
  const since=now-7*DAY,db=getPool();
  const friends=await db.query(`SELECT u.id,u.display_name AS name,
-   (SELECT COUNT(*)::int FROM completions c WHERE c.user_id=u.id AND c.solved_at>=$1) AS "weeklySolved",
-   (SELECT COALESCE(SUM(c.points),0)::int FROM completions c WHERE c.user_id=u.id AND c.solved_at>=$1) AS "weeklyPoints",
-   u.solved_count AS "solvedTotal"
+   CASE WHEN $3 AND u.friends_opt_in THEN (SELECT COUNT(*)::int FROM completions c WHERE c.user_id=u.id AND c.solved_at>=$1) END AS "weeklySolved",
+   CASE WHEN $3 AND u.friends_opt_in THEN (SELECT COALESCE(SUM(c.points),0)::int FROM completions c WHERE c.user_id=u.id AND c.solved_at>=$1) END AS "weeklyPoints",
+   CASE WHEN $3 AND u.friends_opt_in THEN u.solved_count END AS "solvedTotal"
    FROM friendships f JOIN users u ON u.id=CASE WHEN f.user_a=$2 THEN f.user_b ELSE f.user_a END
-   WHERE (f.user_a=$2 OR f.user_b=$2) AND u.friends_opt_in=TRUE AND length(u.display_name)>=2
-   ORDER BY u.display_name LIMIT 20`,[since,user.id]);
+   WHERE (f.user_a=$2 OR f.user_b=$2) AND length(u.display_name)>=2
+   ORDER BY u.display_name LIMIT 20`,[since,user.id,!!user.friends_opt_in]);
  const incoming=await db.query(`SELECT r.id,u.display_name AS name FROM friend_requests r JOIN users u ON u.id=r.requester_id
-   WHERE r.recipient_id=$1 AND r.status='pending' AND u.friends_opt_in=TRUE
+   WHERE r.recipient_id=$1 AND r.status='pending'
    ORDER BY r.created_at DESC LIMIT 20`,[user.id]);
  const outgoing=await db.query(`SELECT u.display_name AS name FROM friend_requests r JOIN users u ON u.id=r.recipient_id
-   WHERE r.requester_id=$1 AND r.status='pending' AND u.friends_opt_in=TRUE
+   WHERE r.requester_id=$1 AND r.status='pending'
    ORDER BY r.created_at DESC LIMIT 20`,[user.id]);
  return {enabled:true,friends:friends.rows,incoming:incoming.rows,outgoing:outgoing.rows,
    privacy:'Прогресс доступен только подтверждённым друзьям. Отключить можно в профиле.'};

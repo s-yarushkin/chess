@@ -56,8 +56,9 @@ test('Postgres: unique nickname, opt-in directory, requests, league invitations 
   const sameNick=await updateProfile(b,{displayName:alice.toUpperCase(),friendsOptIn:true,directoryVisible:true})
    .then(()=>null,e=>e);
   assert.match(sameNick?.message||'',/уже занят/);
-  await updateProfile(b,{displayName:bob,friendsOptIn:true,directoryVisible:true});
-  await updateProfile(c,{displayName:cory,friendsOptIn:true,directoryVisible:true});
+  const registeredB=await updateProfile(b,{displayName:bob,friendsOptIn:false});
+  assert.equal(registeredB.directory_visible,true);
+  await updateProfile(c,{displayName:cory,friendsOptIn:false,directoryVisible:true});
   await updateProfile(hidden,{displayName:quiet,friendsOptIn:true,directoryVisible:false});
   const activeA=(await db.query('SELECT * FROM users WHERE id=$1',[a.id])).rows[0];
   const activeB=(await db.query('SELECT * FROM users WHERE id=$1',[b.id])).rows[0];
@@ -103,7 +104,9 @@ test('Postgres: unique nickname, opt-in directory, requests, league invitations 
   assert.equal((await playerDirectory(activeA,{q:bob})).players.length,1);
    await updateProfile(b,{directoryVisible:false});
    assert.equal((await playerDirectory(activeA,{q:bob})).players.length,0);
-  assert.equal((await friendsSnapshot((await db.query('SELECT * FROM users WHERE id=$1',[a.id])).rows[0])).friends.length,0);
+  const privateFriend=(await friendsSnapshot((await db.query('SELECT * FROM users WHERE id=$1',[a.id])).rows[0])).friends;
+  assert.equal(privateFriend.length,1);
+  assert.equal(privateFriend[0].weeklySolved,null);
   await assert.rejects(invitePlayersToLeague(a,league.id,[hidden.id]),/недоступны/);
  }finally{
   await db.query('DELETE FROM users WHERE id=ANY($1::uuid[])',[ids]);

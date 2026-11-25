@@ -67,7 +67,7 @@ export async function updateProfile(user,body){
     const name=body.displayName===undefined?current.display_name:body.displayName;
     const nick=name?normalizeNickname(name):{name:'',key:null};
     const sharing=body.friendsOptIn===undefined?!!current.friends_opt_in:body.friendsOptIn;
-    const visible=!!nick.key&&(body.directoryVisible===undefined?!!current.directory_visible:body.directoryVisible);
+    const visible=body.directoryVisible===undefined?!!current.directory_visible:body.directoryVisible;
     try{
       const r=await db.query(`UPDATE users SET display_name=$1,nickname_key=$2,
         friends_opt_in=$3,directory_visible=$4,leaderboard_opt_in=FALSE

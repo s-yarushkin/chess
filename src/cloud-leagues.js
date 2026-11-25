@@ -8,7 +8,7 @@ const DAY=86400_000;
 const nowMs=()=>Date.now();
 const numeric=async(db,sql,args)=>Number((await db.query(sql,args)).rows[0]?.n||0);
 const requireEnabled=user=>{
-  if(!user?.friends_opt_in||!user?.display_name)throw Error('Для лиги включи обмен прогрессом в профиле');
+  if(!user?.display_name)throw Error('Для лиги укажи никнейм в профиле');
 };
 const requireUuid=id=>{if(typeof id!=='string'||!LEAGUE_UUID.test(id))throw Error('Неверный идентификатор лиги');return id;};
 const leagueCount=(db,userId)=>numeric(db,
@@ -29,7 +29,7 @@ export async function createLeague(user,input,now=nowMs()){
   });
 }
 export async function listLeagues(user){
-  if(!user.friends_opt_in)return {enabled:false,leagues:[]};
+  if(!user?.display_name)return {enabled:false,leagues:[]};
   const r=await getPool().query(
     'SELECT l.id,l.name,l.owner_id=$1 AS "isOwner",COUNT(m2.user_id)::int AS "memberCount" '+
     'FROM league_members mine JOIN leagues l ON l.id=mine.league_id '+
@@ -46,17 +46,17 @@ export async function leagueDetails(user,id,now=nowMs()){
   const l=r.rows[0],since=now-7*DAY;
   const members=await db.query(
     'SELECT u.id,u.display_name AS name, '+
-    'COALESCE(scores.n,0)::int AS "weeklySolved",COALESCE(scores.points,0)::int AS "weeklyPoints" '+
+    'CASE WHEN $3 AND u.friends_opt_in THEN COALESCE(scores.n,0)::int END AS "weeklySolved",CASE WHEN $3 AND u.friends_opt_in THEN COALESCE(scores.points,0)::int END AS "weeklyPoints" '+
     'FROM league_members lm JOIN users u ON u.id=lm.user_id '+
     'LEFT JOIN LATERAL (SELECT COUNT(*)::int AS n,COALESCE(SUM(s.points),0)::int AS points FROM '+
     '(SELECT points FROM completions WHERE user_id=u.id AND solved_at>=$2 ORDER BY solved_at ASC,puzzle_id ASC LIMIT 8) s) scores ON TRUE '+
-    'WHERE lm.league_id=$1 AND u.friends_opt_in=TRUE AND length(u.display_name)>=2 '+
-    'ORDER BY "weeklyPoints" DESC,"weeklySolved" DESC,u.display_name ASC LIMIT 20',[id,since]);
+    'WHERE lm.league_id=$1 AND length(u.display_name)>=2 '+
+    'ORDER BY "weeklyPoints" DESC NULLS LAST,"weeklySolved" DESC NULLS LAST,u.display_name ASC LIMIT 20',[id,since,!!user.friends_opt_in]);
   let requests=[];
   if(l.owner_id===user.id){
     const rr=await db.query('SELECT r.id,u.display_name AS name FROM league_requests r '+
       'JOIN users u ON u.id=r.user_id WHERE r.league_id=$1 AND r.status=$2 '+
-      'AND u.friends_opt_in=TRUE AND length(u.display_name)>=2 ORDER BY r.created_at ASC LIMIT 20',[id,'pending']);
+      'AND length(u.display_name)>=2 ORDER BY r.created_at ASC LIMIT 20',[id,'pending']);
     requests=rr.rows;
   }
   return {id:l.id,name:l.name,isOwner:l.owner_id===user.id,

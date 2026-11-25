@@ -15,7 +15,7 @@ test('friend invite codes are high entropy, normalized and not stored raw',()=>{
 test('friend pairs have stable ordering',()=>{
  assert.deepEqual(friendPair('b','a'),friendPair('a','b'));
 });
-test('disabled progress sharing reveals no friends, requests or activity',async()=>{
+test('missing account never reveals friends, requests or activity',async()=>{
  assert.deepEqual(await friendsSnapshot({friends_opt_in:false}),{
   enabled:false,friends:[],incoming:[],outgoing:[],privacy:'Обмен выключен. Друзья не видят твой прогресс.'
  });

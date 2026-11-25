@@ -255,7 +255,7 @@ async function loadPlayerDirectory(){
    player.requestReceived?'Приглашает тебя':'Добавить в друзья';
   const button=messageNode('button',label,'button '+(player.isFriend||player.requestSent?'outline':'primary'));
   button.type='button';
-  button.disabled=!state.me?.friendsOptIn||player.isFriend||player.requestSent||player.requestReceived;
+  button.disabled=!state.me?.displayName||player.isFriend||player.requestSent||player.requestReceived;
   if(!button.disabled)button.addEventListener('click',async()=>{
    button.disabled=true;
    try{
@@ -265,7 +265,7 @@ async function loadPlayerDirectory(){
   });
   row.append(button);list.append(row);
  }
- if(!data.players.length)list.append(messageNode('p','Игроки не найдены. Можно попросить друга включить показ никнейма в профиле.'));
+ if(!data.players.length)list.append(messageNode('p','Нет других видимых игроков по этому запросу.'));
 }
 async function openFriends(){
  $('friends').showModal();await refreshFriends();
@@ -274,12 +274,12 @@ async function refreshFriends(){
  try{
   const result=await api('/api/friends');
   $('friendActions').hidden=!result.enabled;
-  $('friendStatus').textContent=result.enabled?'Прогресс видят только подтверждённые друзья.':'Каталог доступен, но для запросов включи обмен прогрессом в профиле.';
+  $('friendStatus').textContent=result.enabled?'Прогресс видят только подтверждённые друзья.':'Укажи никнейм в профиле.';
   await loadPlayerDirectory();
   const list=$('friendsList');list.replaceChildren();
   for(const friend of result.friends){
    const row=messageNode('div','','friend-row');
-   const description=messageNode('div',`${friend.name} · за неделю ${friend.weeklySolved}/8 задач`);
+   const description=messageNode('div',friend.weeklySolved==null?friend.name:`${friend.name} · за неделю ${friend.weeklySolved}/8 задач`);
    const remove=messageNode('button','Удалить','button outline');remove.type='button';
    remove.addEventListener('click',async()=>{if(!window.confirm('Убрать друга из отряда?'))return;
     try{await api('/api/friends/'+friend.id,{method:'DELETE'});await refreshFriends();}catch(e){toast(e.message);}});
@@ -341,7 +341,7 @@ async function loadLeagueCandidates(){
   });
   row.append(input,messageNode('span',player.name));list.append(row);
  }
- if(!list.childElementCount)list.append(messageNode('p','Игроки не найдены. В каталоге только участники, включившие показ никнейма.'));
+ if(!list.childElementCount)list.append(messageNode('p','Нет других видимых игроков по этому запросу.'));
  $('sendLeagueInvitations').textContent='Пригласить выбранных ('+leagueSelected.size+')';
 }
 async function openLeagues(){
@@ -354,7 +354,7 @@ async function refreshLeagues(){
   try{
     const data=await api('/api/leagues');
     if(!data.enabled){
-      list.append(messageNode('p','Чтобы создать или вступить в лигу, включи обмен прогрессом в профиле.'));
+      list.append(messageNode('p','Чтобы создать или вступить в лигу, укажи никнейм.'));
       $('leagueDetail').hidden=true;
       return;
     }
@@ -405,7 +405,7 @@ async function showLeague(id){
     const row=messageNode('div','','league-row');
     const info=document.createElement('div');
     info.append(messageNode('strong',(index+1)+'. '+member.name));
-    info.append(messageNode('small',member.weeklySolved+'/'+details.weeklyLimit+' задач · '+member.weeklyPoints+' ★ за неделю'));
+    info.append(messageNode('small',member.weeklySolved==null?'Прогресс скрыт':member.weeklySolved+'/'+details.weeklyLimit+' задач · '+member.weeklyPoints+' ★ за неделю'));
     row.append(info);
     if(details.isOwner && member.id!==state.me.id){
       row.append(leagueActionButton('Убрать',async()=>{
