@@ -13,9 +13,10 @@ test('welcome covers start, ordinary text and non-text private messages',()=>{
   assert.deepEqual(reply.extra.reply_markup.inline_keyboard,[[{text:'Играть в шахматы',web_app:{url}}]]);
  }
  assert.match(WELCOME_TEXT,/восьмилетний Лёша/);
- assert.match(WELCOME_TEXT,/полностью бесплатное/);
+ assert.match(WELCOME_TEXT,/совершенно бесплатно/);
  assert.match(WELCOME_TEXT,/Сказать спасибо/);
- assert.match(WELCOME_TEXT,/взрослые могут добровольно/);
+ assert.match(WELCOME_TEXT,/но это совсем не обязательно/);
+ assert.match(WELCOME_TEXT,/отзывам, замечаниям и новым идеям/);
  for(const message of [null,{}, {chat:{id:-1,type:'group'},text:'/start'},{chat,from:{is_bot:true},text:'hello'}])
   assert.equal(welcomeForMessage(message,url),null);
  assert.equal(welcomeForMessage({chat},undefined),null);
