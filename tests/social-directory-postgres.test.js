@@ -59,8 +59,9 @@ test('Postgres: unique nickname, opt-in directory, requests, league invitations 
   await updateProfile(b,{displayName:bob,friendsOptIn:true,directoryVisible:true});
   await updateProfile(c,{displayName:cory,friendsOptIn:true,directoryVisible:true});
   await updateProfile(hidden,{displayName:quiet,friendsOptIn:true,directoryVisible:false});
+  const activeA=(await db.query('SELECT * FROM users WHERE id=$1',[a.id])).rows[0];
   await assert.rejects(requestFriendById(a,hidden.id),/не доступен|недоступен/);
-  const listed=await playerDirectory(a,{page:0,q:suffix});
+  const listed=await playerDirectory(activeA,{page:0,q:suffix});
   assert.deepEqual(new Set(listed.players.map(x=>x.name)),new Set([bob,cory]));
   assert.equal('points' in listed.players[0],false);
   assert.equal('telegram_id' in listed.players[0],false);
@@ -71,7 +72,7 @@ test('Postgres: unique nickname, opt-in directory, requests, league invitations 
   assert.equal(incoming.incoming.length,1);
   assert.equal(incoming.incoming[0].name,alice);
   await respondFriend(b,incoming.incoming[0].id,true);
-  assert.equal((await playerDirectory(a,{q:bob})).players[0].isFriend,true);
+  assert.equal((await playerDirectory(activeA,{q:bob})).players[0].isFriend,true);
   assert.equal((await friendsSnapshot((await db.query('SELECT * FROM users WHERE id=$1',[a.id])).rows[0])).friends.length,1);
   await requestFriendById(a,c.id);
   const cUser=(await db.query('SELECT * FROM users WHERE id=$1',[c.id])).rows[0];
@@ -98,7 +99,7 @@ test('Postgres: unique nickname, opt-in directory, requests, league invitations 
   await assert.rejects(invitePlayersToLeague(a,league.id,[c.id]),/через неделю/);
   assert.equal((await leagueDetails(a,league.id)).memberCount,2);
   await updateProfile(b,{friendsOptIn:false});
-  assert.equal((await playerDirectory(a,{q:bob})).players.length,0);
+  assert.equal((await playerDirectory(activeA,{q:bob})).players.length,0);
   assert.equal((await friendsSnapshot((await db.query('SELECT * FROM users WHERE id=$1',[a.id])).rows[0])).friends.length,0);
   await assert.rejects(invitePlayersToLeague(a,league.id,[hidden.id]),/недоступны/);
  }finally{
