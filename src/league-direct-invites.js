@@ -23,8 +23,8 @@ export async function invitePlayersToLeague(owner,leagueId,userIds,now=Date.now(
   const members=await count(db,'SELECT COUNT(*)::int AS n FROM league_members WHERE league_id=$1',[leagueId]);
   if(members>=LEAGUE_MEMBER_LIMIT)throw Error('Лига уже заполнена');
   const candidates=(await db.query(
-    \`SELECT id,display_name,nickname_key,directory_visible,friends_opt_in FROM users
-     WHERE id=ANY($1::uuid[]) FOR UPDATE\`,[userIds])).rows;
+    `SELECT id,display_name,nickname_key,directory_visible,friends_opt_in FROM users
+     WHERE id=ANY($1::uuid[]) FOR UPDATE`,[userIds])).rows;
   if(candidates.length!==userIds.length||candidates.some(u=>u.id===owner.id||
     !u.directory_visible||!u.friends_opt_in||!u.nickname_key))
     throw Error('Некоторые игроки недоступны для приглашения');
@@ -38,10 +38,10 @@ export async function invitePlayersToLeague(owner,leagueId,userIds,now=Date.now(
     if(prior?.status==='declined'&&prior.responded_at>now-7*DAY)
       throw Error('Игрок недавно отклонил приглашение. Повторить можно через неделю');
     await db.query(
-      \`INSERT INTO league_direct_invitations(id,league_id,user_id,status,created_at)
+      `INSERT INTO league_direct_invitations(id,league_id,user_id,status,created_at)
        VALUES($1,$2,$3,'pending',$4)
        ON CONFLICT(league_id,user_id) DO UPDATE SET
-       status='pending',created_at=EXCLUDED.created_at,responded_at=NULL\`,
+       status='pending',created_at=EXCLUDED.created_at,responded_at=NULL`,
       [randomUUID(),leagueId,id,now]);sent++;
   }
   return {ok:true,sent,already,message:sent?'Приглашения появятся у игроков в разделе «Лиги».':'Все выбранные игроки уже приглашены или участвуют.'};
@@ -50,11 +50,11 @@ export async function invitePlayersToLeague(owner,leagueId,userIds,now=Date.now(
 export async function leagueInvitationInbox(user){
  if(!user.friends_opt_in)return {enabled:false,invitations:[]};
  const data=await getPool().query(
-  \`SELECT d.id,d.league_id AS "leagueId",l.name AS "leagueName",u.display_name AS "ownerName"
+  `SELECT d.id,d.league_id AS "leagueId",l.name AS "leagueName",u.display_name AS "ownerName"
    FROM league_direct_invitations d JOIN leagues l ON l.id=d.league_id
    JOIN users u ON u.id=l.owner_id
    WHERE d.user_id=$1 AND d.status='pending' AND l.active=TRUE
-   ORDER BY d.created_at DESC LIMIT 20\`,[user.id]);
+   ORDER BY d.created_at DESC LIMIT 20`,[user.id]);
  return {enabled:true,invitations:data.rows};
 }
 export async function respondLeagueInvitation(user,invitationId,accept,now=Date.now()){
@@ -79,8 +79,8 @@ export async function respondLeagueInvitation(user,invitationId,accept,now=Date.
       [user.id]);
     if(leagueCount>=LEAGUE_MAX_JOINED)throw Error('Можно участвовать максимум в трёх лигах');
     await db.query(
-      \`INSERT INTO league_members(league_id,user_id,role,joined_at)
-       VALUES($1,$2,'member',$3) ON CONFLICT DO NOTHING\`,[l.id,user.id,now]);
+      `INSERT INTO league_members(league_id,user_id,role,joined_at)
+       VALUES($1,$2,'member',$3) ON CONFLICT DO NOTHING`,[l.id,user.id,now]);
   }
   await db.query('UPDATE league_direct_invitations SET status=$1,responded_at=$2 WHERE id=$3',
     [accept?'accepted':'declined',now,invitationId]);
@@ -90,9 +90,9 @@ export async function respondLeagueInvitation(user,invitationId,accept,now=Date.
 export async function socialPendingCounts(user){
  if(!user?.friends_opt_in)return {friends:0,leagues:0};
  const r=await getPool().query(
- \`SELECT
+ `SELECT
    (SELECT COUNT(*)::int FROM friend_requests r WHERE r.recipient_id=$1 AND r.status='pending') AS friends,
    (SELECT COUNT(*)::int FROM league_direct_invitations d JOIN leagues l ON l.id=d.league_id
-     WHERE d.user_id=$1 AND d.status='pending' AND l.active=TRUE) AS leagues\`,[user.id]);
+     WHERE d.user_id=$1 AND d.status='pending' AND l.active=TRUE) AS leagues`,[user.id]);
  return r.rows[0];
 }
