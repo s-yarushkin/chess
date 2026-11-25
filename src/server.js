@@ -1,3 +1,4 @@
+import {welcomeForMessage} from './telegram-welcome.js';
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {dirname,join,extname,resolve} from 'node:path';
@@ -22,10 +23,8 @@ async function handleTelegramWebhook(req,res){
   const expected=process.env.TG_WEBHOOK_SECRET||'';
   if(!expected||!equals(req.headers['x-telegram-bot-api-secret-token'],expected))return failure(res,403,'Forbidden');
   const update=await body(req),msg=update.message;
-  if(msg?.text?.trim().startsWith('/start')){
-    const webapp=process.env.WEBAPP_URL;
-    if(webapp){await botRespond(msg.chat.id,'♟ Шахматная академия. Решай задачи, зарабатывай очки и следи за прогрессом!',{reply_markup:{inline_keyboard:[[{text:'Играть',web_app:{url:webapp}}]]}});}
-  }
+  const welcome=welcomeForMessage(msg,process.env.WEBAPP_URL);
+  if(welcome)await botRespond(welcome.chatId,welcome.text,welcome.extra);
   success(res,{ok:true});
 }
 function rateLimiter(){const records=new Map();return (ip)=>{

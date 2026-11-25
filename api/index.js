@@ -1,3 +1,4 @@
+import {welcomeForMessage} from '../src/telegram-welcome.js';
 import {initDb} from '../src/cloud-db.js';
 import {getCatalog} from '../src/cloud-catalog.js';
 import {verifyTelegram,authenticateTelegram,currentUser,updateProfile,stats,startAttempt,findAttempt,findActiveAttempt,publicAttempt,submitMove,hint,publicUser} from '../src/cloud-learning.js';
@@ -51,9 +52,8 @@ export default async function handler(req,res){
         await sendBot(recipient().id,'♟ Всего зарегистрировано: '+total+'\nЛичные уведомления о регистрациях включены.',{protect_content:true});
         return send(res,{ok:true});
       }
-      if(m?.chat?.type==='private'&&m?.text?.trim().startsWith('/start')){
-        await sendBot(m.chat.id,'♟ Шахматная академия. Открой тренажёр и решай задачи!',{reply_markup:{inline_keyboard:[[{text:'Играть',web_app:{url:process.env.WEBAPP_URL||'https://chess-academy-theta.vercel.app'}}]]}});
-      }
+      const welcome=welcomeForMessage(m,process.env.WEBAPP_URL||'https://chess-academy-theta.vercel.app');
+      if(welcome)await sendBot(welcome.chatId,welcome.text,welcome.extra);
       return send(res,{ok:true});
     }
     await initDb();
