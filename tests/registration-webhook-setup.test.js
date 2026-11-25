@@ -82,5 +82,5 @@ test('frontend code does not disclose admin account or tokens',()=>{
  assert.match(api,/authorizedNotifier\(user,body\.initData\)/);
  assert.match(api,/recipientState\(body\.initData\)/);
  assert.match(ui,/REGISTRATION_ADMIN_CHAT_ID/);
- assert.match(api,/startsWith\('\/start'\)/);
+ assert.match(api,/welcomeForMessage\(m,/);
 });
