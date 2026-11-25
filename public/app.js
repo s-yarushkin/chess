@@ -307,10 +307,47 @@ const leagueActionButton=(label,callback,kind='outline')=>{
   b.addEventListener('click',async()=>{try{b.disabled=true;await callback();}catch(e){toast(e.message);}finally{b.disabled=false;}});
   return b;
 };
+let leagueSelected=new Set(),currentLeagueMembers=new Set(),leagueSearchTimer=0;
+async function refreshLeagueInbox(){
+ const list=$('leagueInbox');list.replaceChildren();
+ const inbox=await api('/api/leagues/invitations');
+ for(const inv of inbox.invitations){
+  const row=messageNode('div','','league-row');
+  row.append(messageNode('span','«'+inv.leagueName+'» · от '+inv.ownerName));
+  const actions=document.createElement('div');
+  for(const [action,label] of [['accept','Принять'],['decline','Отклонить']]){
+   actions.append(leagueActionButton(label,async()=>{
+    await api('/api/leagues/invitations/'+inv.id+'/'+action,{method:'POST',body:'{}'});
+    toast(action==='accept'?'Ты вступил в лигу!':'Приглашение отклонено');
+    await refreshLeagueInbox();await refreshLeagues();await updateSocialBadges();
+   },action==='accept'?'primary':'outline'));
+  }
+  row.append(actions);list.append(row);
+ }
+ if(!inbox.invitations.length)list.append(messageNode('p','Новых приглашений нет.'));
+}
+async function loadLeagueCandidates(){
+ if(!activeLeagueId)return;
+ const list=$('leaguePlayerCandidates');list.replaceChildren();
+ const data=await api('/api/players?page=0&q='+encodeURIComponent($('leaguePlayerSearch').value.trim()));
+ for(const player of data.players){
+  if(currentLeagueMembers.has(player.id))continue;
+  const row=messageNode('label','','league-pick-row');
+  const input=document.createElement('input');
+  input.type='checkbox';input.value=player.id;input.checked=leagueSelected.has(player.id);
+  input.addEventListener('change',()=>{
+   if(input.checked)leagueSelected.add(player.id);else leagueSelected.delete(player.id);
+   $('sendLeagueInvitations').textContent='Пригласить выбранных ('+leagueSelected.size+')';
+  });
+  row.append(input,messageNode('span',player.name));list.append(row);
+ }
+ if(!list.childElementCount)list.append(messageNode('p','Игроки не найдены. В каталоге только участники, включившие показ никнейма.'));
+ $('sendLeagueInvitations').textContent='Пригласить выбранных ('+leagueSelected.size+')';
+}
 async function openLeagues(){
-  if(!state.me)return;
-  $('leagues').showModal();
-  await refreshLeagues();
+ if(!state.me)return;
+ $('leagues').showModal();
+ await refreshLeagueInbox();await refreshLeagues();await updateSocialBadges();
 }
 async function refreshLeagues(){
   const list=$('leagueList');list.replaceChildren();
@@ -338,12 +375,15 @@ async function refreshLeagues(){
 }
 async function showLeague(id){
   const details=await api('/api/leagues/'+encodeURIComponent(id));
+  if(activeLeagueId!==id){leagueSelected=new Set();$('leaguePlayerSearch').value='';}
   activeLeagueId=id;
   $('leagueDetail').hidden=false;
   $('leagueTitle').textContent=details.name;
   $('leagueSummary').textContent=details.memberCount+'/20 участников · рейтинг за 7 дней · первые '+details.weeklyLimit+' задач каждого';
   $('leagueAdmin').hidden=!details.isOwner;
   $('leagueInvite').hidden=true;
+  currentLeagueMembers=new Set(details.members.map(x=>x.id));
+  if(details.isOwner)await loadLeagueCandidates();
   const pending=$('leagueRequests');pending.replaceChildren();
   if(details.isOwner){
     if(!details.requests.length)pending.append(messageNode('p','Новых заявок нет.'));
@@ -438,6 +478,22 @@ $('joinLeague').addEventListener('click',async()=>{
     const data=await api('/api/leagues/join',{method:'POST',body:JSON.stringify({code})});
     $('leagueCode').value='';toast('Заявка отправлена в лигу «'+data.leagueName+'»');
   }catch(e){toast(e.message);}
+});
+$('leaguePlayerSearch').addEventListener('input',()=>{
+ clearTimeout(leagueSearchTimer);
+ leagueSearchTimer=setTimeout(()=>loadLeagueCandidates().catch(e=>toast(e.message)),250);
+});
+$('sendLeagueInvitations').addEventListener('click',async()=>{
+ if(!activeLeagueId||!leagueSelected.size){toast('Отметь игроков для приглашения');return;}
+ const button=$('sendLeagueInvitations');button.disabled=true;
+ try{
+  const result=await api('/api/leagues/'+activeLeagueId+'/invitations',{
+   method:'POST',body:JSON.stringify({playerIds:[...leagueSelected]})
+  });
+  leagueSelected.clear();
+  $('leagueInviteStatus').textContent=result.message+' Отправлено: '+result.sent+'.';
+  await loadLeagueCandidates();
+ }catch(e){toast(e.message);}finally{button.disabled=false;}
 });
 $('createLeagueCode').addEventListener('click',async()=>{
   if(!activeLeagueId)return;
