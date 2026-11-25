@@ -142,8 +142,8 @@ async function refreshMe(){
  $('firstTimeWelcome').hidden=!!me.displayName;
  $('friendsOptIn').checked=me.friendsOptIn;
  $('friendsOptIn').disabled=!state.features.friendsEnabled;
- $('directoryVisible').checked=!!me.directoryVisible;
- $('directoryVisible').disabled=!me.friendsOptIn;
+ $('directoryVisible').checked=!me.directoryVisible;
+ $('directoryVisible').disabled=false;
  $('streak').textContent=me.game.streak;
  const p=me.game.progress;$('levelName').textContent=`Уровень ${me.game.level} · ${me.game.levelName}`;
  $('levelCount').textContent=p.target?`${p.current}/${p.target}`:'Максимальный уровень';
@@ -438,12 +438,9 @@ async function begin(){
 $('devEnter').addEventListener('click',async()=>{try{const login=await api('/api/auth/dev',{method:'POST',body:JSON.stringify({name:$('devName').value})});
  state.token=login.token;sessionStorage.setItem('chess_session',state.token);$('auth').close();await refreshMe();await newPuzzle();
  }catch(e){$('authError').textContent=e.message;}});
-$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,friendsOptIn:state.features.friendsEnabled&&$('friendsOptIn').checked,directoryVisible:state.features.friendsEnabled&&$('friendsOptIn').checked&&$('directoryVisible').checked})});
+$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,friendsOptIn:state.features.friendsEnabled&&$('friendsOptIn').checked,directoryVisible:!$('directoryVisible').checked})});
  $('profile').close();await refreshMe();if(!state.attempt)await newPuzzle();}catch(e){$('profileError').textContent=e.message;}});
-$('friendsOptIn').addEventListener('change',()=>{
- $('directoryVisible').disabled=!$('friendsOptIn').checked;
- if(!$('friendsOptIn').checked)$('directoryVisible').checked=false;
-});
+
 $('playerSearch').addEventListener('input',()=>{
  directoryPage=0;clearTimeout(directoryTimer);
  directoryTimer=setTimeout(()=>loadPlayerDirectory().catch(e=>toast(e.message)),250);

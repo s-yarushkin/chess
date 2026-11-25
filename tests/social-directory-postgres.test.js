@@ -21,7 +21,7 @@ test('nicknames are unique normalized pseudonyms with no contact names',()=>{
 test('directory never exposes Telegram IDs, scores or contacts',()=>{
  const query=text('src/social-directory.js');
  assert.match(query,/directory_visible=TRUE/);
- assert.match(query,/friends_opt_in=TRUE/);
+ assert.doesNotMatch(query,/u\.friends_opt_in=TRUE/);
  assert.match(query,/nickname_key IS NOT NULL/);
  assert.match(query,/admin_account_merges/);
  assert.doesNotMatch(query,/SELECT u\\.\\*|u.telegram_id|u.points|u.solved_count/i);
@@ -100,7 +100,9 @@ test('Postgres: unique nickname, opt-in directory, requests, league invitations 
   await assert.rejects(invitePlayersToLeague(a,league.id,[c.id]),/через неделю/);
   assert.equal((await leagueDetails(activeA,league.id)).memberCount,2);
   await updateProfile(b,{friendsOptIn:false});
-  assert.equal((await playerDirectory(activeA,{q:bob})).players.length,0);
+  assert.equal((await playerDirectory(activeA,{q:bob})).players.length,1);
+   await updateProfile(b,{directoryVisible:false});
+   assert.equal((await playerDirectory(activeA,{q:bob})).players.length,0);
   assert.equal((await friendsSnapshot((await db.query('SELECT * FROM users WHERE id=$1',[a.id])).rows[0])).friends.length,0);
   await assert.rejects(invitePlayersToLeague(a,league.id,[hidden.id]),/недоступны/);
  }finally{

@@ -26,7 +26,7 @@ export async function playerDirectory(user,{page=0,q=''}={}){
     EXISTS(SELECT 1 FROM friend_requests r WHERE r.requester_id=u.id
       AND r.recipient_id=$1 AND r.status='pending') AS "requestReceived"
     FROM users u
-    WHERE u.id<>$1 AND u.directory_visible=TRUE AND u.friends_opt_in=TRUE
+    WHERE u.id<>$1 AND u.directory_visible=TRUE
       AND u.nickname_key IS NOT NULL
       AND NOT EXISTS(SELECT 1 FROM admin_account_merges a WHERE a.source_user_id=u.id)
       AND ($2='' OR POSITION($2 IN u.nickname_key)>0)
