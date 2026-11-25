@@ -90,7 +90,7 @@ export async function initDb(){
         ROW_NUMBER() OVER(PARTITION BY lower(btrim(u.display_name)) ORDER BY u.created_at,u.id) AS rn
       FROM users u
       WHERE u.nickname_key IS NULL AND btrim(u.display_name) ~ '^[A-Za-zА-Яа-яЁё0-9_-]{2,24}$'
-        AND NOT EXISTS(SELECT 1 FROM admin_account_merges m WHERE m.source_user_id=u.id)
+        AND btrim(u.display_name) ~ '[A-Za-zА-Яа-яЁё]' AND NOT EXISTS(SELECT 1 FROM admin_account_merges m WHERE m.source_user_id=u.id)
     ) UPDATE users u SET nickname_key=e.nick FROM eligible e
     WHERE e.id=u.id AND e.rn=1
       AND NOT EXISTS(SELECT 1 FROM users taken WHERE taken.nickname_key=e.nick)`);
