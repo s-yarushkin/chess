@@ -12,7 +12,7 @@ import {invitePlayersToLeague,leagueInvitationInbox,respondLeagueInvitation,soci
 const text=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('nicknames are unique normalized pseudonyms with no contact names',()=>{
  assert.deepEqual(normalizeNickname(' ЛЁША_2 '),{name:'ЛЁША_2',key:'лёша_2'});
- for(const n of ['Иван Петров','@name','Ivan@example.com','John.Smith','x','a'.repeat(25)])
+ for(const n of ['Иван Петров','@name','Ivan@example.com','John.Smith','89211282845','x','a'.repeat(25)])
    assert.throws(()=>normalizeNickname(n),/Никнейм/);
  assert.equal(pageIndex('0'),0);
  assert.equal(pageIndex('20'),20);
