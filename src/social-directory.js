@@ -18,7 +18,7 @@ export async function playerDirectory(user,{page=0,q=''}={}){
  const search=q.trim().toLocaleLowerCase('ru-RU');
  const db=getPool();
  const rows=await db.query(
-  \`SELECT u.id,u.display_name AS name,
+  `SELECT u.id,u.display_name AS name,
     EXISTS(SELECT 1 FROM friendships f WHERE
       (f.user_a=$1 AND f.user_b=u.id) OR (f.user_b=$1 AND f.user_a=u.id)) AS "isFriend",
     EXISTS(SELECT 1 FROM friend_requests r WHERE r.requester_id=$1
@@ -31,7 +31,7 @@ export async function playerDirectory(user,{page=0,q=''}={}){
       AND NOT EXISTS(SELECT 1 FROM admin_account_merges a WHERE a.source_user_id=u.id)
       AND ($2='' OR POSITION($2 IN u.nickname_key)>0)
     ORDER BY u.nickname_key,u.id
-    LIMIT 31 OFFSET $3\`,[user.id,search,p*30]);
+    LIMIT 31 OFFSET $3`,[user.id,search,p*30]);
  const hasMore=rows.rows.length>30;
  return {players:rows.rows.slice(0,30),page:p,hasMore,privacy:'Каталог содержит только никнеймы пользователей, согласившихся показываться. Прогресс доступен после подтверждения.'};
 }
@@ -51,14 +51,14 @@ export async function requestFriendById(user,otherId,now=Date.now()){
   if((await db.query('SELECT 1 FROM friendships WHERE user_a=$1 AND user_b=$2',pair)).rowCount)
     throw Error('Вы уже друзья');
   const pending=await db.query(
-    \`SELECT 1 FROM friend_requests WHERE status='pending' AND
-       ((requester_id=$1 AND recipient_id=$2) OR (requester_id=$2 AND recipient_id=$1))\`,
+    `SELECT 1 FROM friend_requests WHERE status='pending' AND
+       ((requester_id=$1 AND recipient_id=$2) OR (requester_id=$2 AND recipient_id=$1))`,
     [user.id,otherId]);
   if(pending.rowCount)throw Error('Запрос на дружбу уже отправлен');
   // A declined request cannot immediately be repeated: prevents pestering kids.
   const declined=await db.query(
-    \`SELECT 1 FROM friend_requests WHERE requester_id=$1 AND recipient_id=$2
-      AND status='rejected' AND responded_at>$3 LIMIT 1\`,[user.id,otherId,now-7*DAY]);
+    `SELECT 1 FROM friend_requests WHERE requester_id=$1 AND recipient_id=$2
+      AND status='rejected' AND responded_at>$3 LIMIT 1`,[user.id,otherId,now-7*DAY]);
   if(declined.rowCount)throw Error('Повторный запрос можно отправить через неделю');
   if(await count(db,'SELECT COUNT(*)::int AS n FROM friend_requests WHERE requester_id=$1 AND created_at>$2',
     [user.id,now-DAY])>=6)throw Error('Лимит запросов в друзья на сегодня исчерпан');
