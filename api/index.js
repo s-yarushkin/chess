@@ -4,6 +4,8 @@ import {verifyTelegram,authenticateTelegram,currentUser,updateProfile,stats,star
 import {timingSafeEqual} from 'node:crypto';
 import {createLeague,listLeagues,leagueDetails,inviteToLeague,requestLeague,decideLeagueRequest,leaveOrRemoveLeagueMember,closeLeague} from '../src/cloud-leagues.js';
 import {createInvite,requestFriend,respondFriend,removeFriend,friendsSnapshot} from '../src/cloud-friends.js';
+import {playerDirectory,requestFriendById} from '../src/social-directory.js';
+import {invitePlayersToLeague,leagueInvitationInbox,respondLeagueInvitation,socialPendingCounts} from '../src/league-direct-invites.js';
 import {getDonationInfo,getDonationQr} from '../src/donation-api.js';
 import {DEFAULT_DONATION_OZON_URL} from '../src/donation.js';
 import {notifyRegistration,registeredCount,isRegistrationCommand,recipient} from '../src/registration-notifications.js';
@@ -88,8 +90,14 @@ export default async function handler(req,res){
       return send(res,{...publicUser(u),...await stats(u)});
     }
     if(path==='/api/leaderboard'&&method==='GET')return send(res,{users:[],private:true});
+    if(path==='/api/players'&&method==='GET')
+      return send(res,await playerDirectory(user,{page:parsed.searchParams.get('page')||0,q:parsed.searchParams.get('q')||''}));
+    if(path==='/api/social/pending'&&method==='GET')return send(res,await socialPendingCounts(user));
     if(path==='/api/friends'&&method==='GET')return send(res,await friendsSnapshot(user));
     if(path==='/api/friends/invitations'&&method==='POST')return send(res,await createInvite(user),201);
+    if(path==='/api/friends/requests/direct'&&method==='POST'){
+      const data=await payload(req);return send(res,await requestFriendById(user,data.playerId),201);
+    }
     if(path==='/api/friends/requests'&&method==='POST'){
       const data=await payload(req);return send(res,await requestFriend(user,data.code),201);
     }
@@ -101,6 +109,13 @@ export default async function handler(req,res){
     if(path==='/api/leagues'&&method==='GET')return send(res,await listLeagues(user));
     if(path==='/api/leagues'&&method==='POST')return send(res,await createLeague(user,(await payload(req)).name),201);
     if(path==='/api/leagues/join'&&method==='POST')return send(res,await requestLeague(user,(await payload(req)).code),201);
+    if(path==='/api/leagues/invitations'&&method==='GET')return send(res,await leagueInvitationInbox(user));
+    const leagueInviteAnswer=path.match(/^\/api\/leagues\/invitations\/([0-9a-f-]{36})\/(accept|decline)$/i);
+    if(leagueInviteAnswer&&method==='POST')
+      return send(res,await respondLeagueInvitation(user,leagueInviteAnswer[1],leagueInviteAnswer[2]==='accept'));
+    const leagueDirectInvite=path.match(/^\/api\/leagues\/([0-9a-f-]{36})\/invitations$/i);
+    if(leagueDirectInvite&&method==='POST')
+      return send(res,await invitePlayersToLeague(user,leagueDirectInvite[1],(await payload(req)).playerIds),201);
     const league=path.match(/^\/api\/leagues\/([0-9a-f-]{36})(?:\/(invites))?$/i);
     if(league&&method==='GET'&&!league[2])return send(res,await leagueDetails(user,league[1]));
     if(league&&method==='POST'&&league[2]==='invites')return send(res,await inviteToLeague(user,league[1]),201);
@@ -130,7 +145,7 @@ export default async function handler(req,res){
     }
     return send(res,{error:'Not found'},404);
   }catch(e){
-    const client=/^(Invalid|Duplicate|No active|Attempt|Illegal|Puzzle|Все задачи|Категория|Неизвестная|Неверный|Необходимо|Имя|Общий рейтинг|Режим друзей|Аккаунт|Сначала|Приглашение|Список друзей|Сегодня|Вы уже друзья|Запрос|Код истёк|Неверный код|Нужно подтвердить|Разовое объединение|Сегодня уже создано|В исходном профиле|Аккаунт уже объединён|Операция объединения|Лига|Приглашение|Только создатель|Для лиги|Название лиги|Можно участвовать|Можно создать|У игрока|Ты уже|Создатель|Заявка|Удалять игроков|Закрыть лигу|Request too large)/.test(e.message);
+    const client=/^(Invalid|Duplicate|No active|Attempt|Illegal|Puzzle|Все задачи|Категория|Неизвестная|Неверный|Необходимо|Имя|Никнейм|Этот никнейм|Неверная настройка|Неверная страница|Неверный поиск|Игрок|Включи|Выбери|Некоторые|Можно пригласить|Лимит|Повторный запрос|Приглашать|Общий рейтинг|Режим друзей|Аккаунт|Сначала|Приглашение|Список друзей|Сегодня|Вы уже друзья|Запрос|Код истёк|Неверный код|Нужно подтвердить|Разовое объединение|Сегодня уже создано|В исходном профиле|Аккаунт уже объединён|Операция объединения|Лига|Приглашение|Только создатель|Для лиги|Название лиги|Можно участвовать|Можно создать|У игрока|Ты уже|Создатель|Заявка|Удалять игроков|Закрыть лигу|Request too large)/.test(e.message);
     const stale=['Attempt already completed','Attempt not found','No active attempt'].includes(e.message);
     if(!client)console.error('Chess Academy cloud request failed:',e.message);
     if(stale)return send(res,{error:'Эта задача уже завершена. Обновляем игровую позицию.',code:'ATTEMPT_STALE'},409);
