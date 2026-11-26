@@ -16,7 +16,7 @@ test('36 distinct tips, safe time and authenticated cron',()=>{
  assert.equal(isStopMessage({chat:{type:'private',id:123},from:{id:123},text:'/stop'}),true);
  assert.equal(isStopMessage({chat:{type:'group',id:123},from:{id:123},text:'/stop'}),false);
 });
-test('Postgres: only opted in inactive users, claim once, rotate, cap, reset and stop',{skip:!process.env.DATABASE_URL},async()=>{
+test('Postgres: only enabled inactive users, claim once, rotate, cap, reset and stop',{skip:!process.env.DATABASE_URL},async()=>{
  await initDb();const db=getPool(),ids=Array.from({length:3},()=>randomUUID()),now=Date.UTC(2026,10,26,9),chats=ids.map((_,i)=>String(8000000000000+Math.floor(Math.random()*1000000)*10+i));
  try{
  for(let i=0;i<3;i++)await db.query('INSERT INTO users(id,telegram_id,display_name,created_at,last_activity_at,reminders_enabled) VALUES($1,$2,$3,$4,$5,$6)',[ids[i],chats[i],'ReminderTest',now-3*WEEK,i===2?now:now-2*WEEK,i!==1]);
@@ -37,4 +37,15 @@ test('Postgres: only opted in inactive users, claim once, rotate, cap, reset and
  assert.equal(calls.filter(c=>c.chat_id===chats[0]).length,3);
  assert.equal(calls.filter(c=>c.chat_id===chats[1]).length,0);
  }finally{await db.query('DELETE FROM users WHERE id=ANY($1::uuid[])',[ids]);}
+});
+
+test('Postgres: new accounts default to enabled and a saved opt-out survives subsequent activity',{skip:!process.env.DATABASE_URL},async()=>{
+ await initDb();const db=getPool(),id=randomUUID(),chat='800000'+String(Date.now()).slice(-9),now=Date.now();
+ try{
+ const row=await db.query('INSERT INTO users(id,telegram_id,created_at) VALUES($1,$2,$3) RETURNING reminders_enabled',[id,chat,now]);
+ assert.equal(row.rows[0].reminders_enabled,true);
+ await disableChatReminders(chat,db);await recordActivity(id,now+120000,db);await initDb();
+ const after=await db.query('SELECT reminders_enabled FROM users WHERE id=$1',[id]);
+ assert.equal(after.rows[0].reminders_enabled,false);
+ }finally{await db.query('DELETE FROM users WHERE id=$1',[id]);}
 });

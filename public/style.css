@@ -341,3 +341,6 @@
  .info-panel .eyebrow{display:none}
 }
 @media(max-width:360px){.tabs .tab{font-size:10px}.top .score small{display:none}}
+
+/* Compact optional reminder preference. */
+.reminder-setting{margin-top:15px}.reminder-switch{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:44px;padding:8px 11px;background:#f0f5f0;color:var(--ink);border:1px solid #d6e5db;border-radius:10px;font-size:13px;text-align:left}.reminder-switch strong{font-size:12px;white-space:nowrap;color:#667b78}.reminder-switch[aria-checked="true"] strong{color:#087965}.reminder-setting small{display:block;font-size:11px;line-height:1.35;margin-top:5px}
