@@ -135,6 +135,7 @@ function displayBadges(){
  }
  $('badgeCount').textContent=badges.filter(b=>b.earned).length;
 }
+function setReminderSwitch(enabled){$('remindersEnabled').setAttribute('aria-checked',String(enabled));$('remindersStatus').textContent=enabled?'Включены':'Выключены';}
 async function refreshMe(){
  const me=await api('/api/me');state.me=me;
  $('points').textContent=me.points;$('solved').textContent=me.solved;
@@ -143,7 +144,7 @@ async function refreshMe(){
  $('friendsOptIn').checked=me.friendsOptIn;
  $('friendsOptIn').disabled=!state.features.friendsEnabled;
  $('directoryVisible').checked=!me.directoryVisible;
- $('remindersEnabled').checked=!!me.remindersEnabled;
+ setReminderSwitch(!!me.remindersEnabled);
  $('directoryVisible').disabled=false;
  $('streak').textContent=me.game.streak;
  const p=me.game.progress;$('levelName').textContent=`Уровень ${me.game.level} · ${me.game.levelName}`;
@@ -439,7 +440,8 @@ async function begin(){
 $('devEnter').addEventListener('click',async()=>{try{const login=await api('/api/auth/dev',{method:'POST',body:JSON.stringify({name:$('devName').value})});
  state.token=login.token;sessionStorage.setItem('chess_session',state.token);$('auth').close();await refreshMe();await newPuzzle();
  }catch(e){$('authError').textContent=e.message;}});
-$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,friendsOptIn:state.features.friendsEnabled&&$('friendsOptIn').checked,directoryVisible:!$('directoryVisible').checked,remindersEnabled:$('remindersEnabled').checked})});
+$('remindersEnabled').addEventListener('click',()=>setReminderSwitch($('remindersEnabled').getAttribute('aria-checked')!=='true'));
+$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,friendsOptIn:state.features.friendsEnabled&&$('friendsOptIn').checked,directoryVisible:!$('directoryVisible').checked,remindersEnabled:$('remindersEnabled').getAttribute('aria-checked')==='true'})});
  $('profile').close();await refreshMe();if(!state.attempt)await newPuzzle();}catch(e){$('profileError').textContent=e.message;}});
 
 $('playerSearch').addEventListener('input',()=>{

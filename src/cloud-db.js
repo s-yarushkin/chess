@@ -109,6 +109,8 @@ export async function initDb(){
       }
     });
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reminders_enabled BOOLEAN NOT NULL DEFAULT FALSE');
+    // New accounts only: preserve every existing player's saved preference.
+    await db.query('ALTER TABLE users ALTER COLUMN reminders_enabled SET DEFAULT TRUE');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS last_activity_at BIGINT');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reminder_at BIGINT');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reminder_count INTEGER NOT NULL DEFAULT 0');
