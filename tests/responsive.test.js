@@ -10,7 +10,11 @@ test('small phone windows keep a full-width board and scroll for short screens',
   assert.ok(latest);
   assert.match(latest,/overflow-y:auto/);
   assert.match(latest,/width:min\(100%,510px\)/);
-  assert.match(latest,/overflow-x:auto/);
+  const compact=css.split('v0.9 — compact phone layout')[1];
+  assert.ok(compact);assert.match(compact,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(compact,/overflow:visible/);
+  assert.match(compact,/\.board-header\{order:1/);
+  assert.match(compact,/\.info-panel #description\{order:2/);
 });
 test('fullscreen safe area is applied to app, dialogs and return button',()=>{
   assert.match(html,/src="\/viewport\.js"/);

@@ -28,7 +28,7 @@ export function normalizeNickname(s){
   return {name:trimmed,key:trimmed.toLocaleLowerCase('ru-RU')};
 }
 export const validName=s=>{try{normalizeNickname(s);return true;}catch{return false;}};
-export const publicUser=u=>({id:u.id,displayName:u.display_name,leaderboardOptIn:false,friendsOptIn:!!u.friends_opt_in,directoryVisible:!!u.directory_visible,points:u.points,solved:u.solved_count,skillRating:u.skill_rating});
+export const publicUser=u=>({id:u.id,displayName:u.display_name,leaderboardOptIn:false,friendsOptIn:!!u.friends_opt_in,directoryVisible:!!u.directory_visible,remindersEnabled:!!u.reminders_enabled,points:u.points,solved:u.solved_count,skillRating:u.skill_rating});
 export async function authenticateTelegram(raw){
   const {telegramId,suggestedName}=verifyTelegram(raw,process.env.TG_BOT_TOKEN);
   const now=Date.now(),userId=randomUUID();
@@ -60,6 +60,7 @@ export async function updateProfile(user,body){
   if(body.displayName!==undefined)normalizeNickname(body.displayName);
   if(body.friendsOptIn!==undefined && typeof body.friendsOptIn!=='boolean')throw Error('Неверное значение настройки друзей');
   if(body.directoryVisible!==undefined && typeof body.directoryVisible!=='boolean')throw Error('Неверная настройка каталога');
+  if(body.remindersEnabled!==undefined&&typeof body.remindersEnabled!=='boolean')throw Error('Неверная настройка напоминаний');
   if(body.leaderboardOptIn===true)throw Error('Общий рейтинг отключён');
   return tx(async db=>{
     const current=(await db.query('SELECT * FROM users WHERE id=$1 FOR UPDATE',[user.id])).rows[0];
@@ -70,8 +71,8 @@ export async function updateProfile(user,body){
     const visible=body.directoryVisible===undefined?!!current.directory_visible:body.directoryVisible;
     try{
       const r=await db.query(`UPDATE users SET display_name=$1,nickname_key=$2,
-        friends_opt_in=$3,directory_visible=$4,leaderboard_opt_in=FALSE
-        WHERE id=$5 RETURNING *`,[nick.name,nick.key,sharing,visible,current.id]);
+        friends_opt_in=$3,directory_visible=$4,leaderboard_opt_in=FALSE,reminders_enabled=$6
+        WHERE id=$5 RETURNING *`,[nick.name,nick.key,sharing,visible,current.id,body.remindersEnabled===undefined?!!current.reminders_enabled:body.remindersEnabled]);
       return {...r.rows[0],firstRegistration:!current.display_name&&!!nick.name};
     }catch(e){
       if(e.code==='23505'&&e.constraint==='users_unique_nickname')

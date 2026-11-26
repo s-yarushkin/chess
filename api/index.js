@@ -1,4 +1,5 @@
 import {welcomeForMessage} from '../src/telegram-welcome.js';
+import {allowedCron,runReminders,recordActivity,isStopMessage,disableChatReminders} from '../src/practice-reminders.js';
 import {initDb} from '../src/cloud-db.js';
 import {getCatalog} from '../src/cloud-catalog.js';
 import {verifyTelegram,authenticateTelegram,currentUser,updateProfile,stats,startAttempt,findAttempt,findActiveAttempt,publicAttempt,submitMove,hint,publicUser} from '../src/cloud-learning.js';
@@ -42,6 +43,10 @@ export default async function handler(req,res){
     if(path==='/healthz'&&method==='GET'){
       await initDb();const catalog=getCatalog();return send(res,{status:'ok',database:'connected',catalog:catalog.counts,publicAccess:true});
     }
+    if(path==='/api/cron/reminders'&&method==='GET'){
+      if(!allowedCron(req.headers.authorization))return send(res,{error:'Forbidden'},403);
+      await initDb();return send(res,await runReminders());
+    }
     if(path==='/telegram/webhook'&&method==='POST'){
       const webhookSecret=webhookSecretFor();
       if(!webhookSecret||!matches(req.headers['x-telegram-bot-api-secret-token'],webhookSecret))return send(res,{error:'Forbidden'},403);
@@ -50,6 +55,11 @@ export default async function handler(req,res){
         await initDb();
         const total=await registeredCount();
         await sendBot(recipient().id,'♟ Всего зарегистрировано: '+total+'\nЛичные уведомления о регистрациях включены.',{protect_content:true});
+        return send(res,{ok:true});
+      }
+      if(isStopMessage(m)){
+        await initDb();await disableChatReminders(m.chat.id);
+        await sendBot(m.chat.id,'Напоминания отключены. Включить их снова можно в профиле приложения.');
         return send(res,{ok:true});
       }
       const welcome=welcomeForMessage(m,process.env.WEBAPP_URL||'https://chess-academy-theta.vercel.app');
@@ -83,6 +93,7 @@ export default async function handler(req,res){
       }catch(e){return send(res,{error:e.message||'Не удалось подключить Telegram'},502);}
     }
     if(path.startsWith('/api/admin/'))return send(res,{error:'Not found'},404);
+    if(path==='/api/me'||path.startsWith('/api/attempts'))await recordActivity(user.id);
     if(path==='/api/me'&&method==='GET')return send(res,{...publicUser(user),...await stats(user)});
     if(path==='/api/me'&&method==='PATCH'){
       const u=await updateProfile(user,await payload(req));

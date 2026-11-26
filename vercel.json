@@ -2,11 +2,29 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "functions": {
-    "api/index.js": {"includeFiles": "data/school-v1/**", "maxDuration": 30}
+    "api/index.js": {
+      "includeFiles": "data/school-v1/**",
+      "maxDuration": 30
+    }
   },
   "rewrites": [
-    {"source": "/healthz", "destination": "/api/index.js?route=healthz"},
-    {"source": "/telegram/webhook", "destination": "/api/index.js?route=webhook"},
-    {"source": "/api/:rest*", "destination": "/api/index.js?route=:rest*"}
+    {
+      "source": "/healthz",
+      "destination": "/api/index.js?route=healthz"
+    },
+    {
+      "source": "/telegram/webhook",
+      "destination": "/api/index.js?route=webhook"
+    },
+    {
+      "source": "/api/:rest*",
+      "destination": "/api/index.js?route=:rest*"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 9 * * *"
+    }
   ]
 }
