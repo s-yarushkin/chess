@@ -315,3 +315,29 @@
  .directory-row button{max-width:60%}
  .friends-dialog,.league-dialog{padding:13px;max-height:calc(100dvh - var(--chess-telegram-clear-top,0px) - 22px)}
 }
+
+/* v0.9 — compact phone layout, no sideways navigation. */
+.tabs{grid-template-columns:repeat(7,minmax(0,1fr))}
+@media(max-width:800px){
+ .app{gap:5px;padding-top:calc(5px + var(--chess-telegram-clear-top,0px))}
+ .top{grid-template-columns:minmax(70px,1fr) minmax(35px,auto) repeat(5,minmax(27px,34px));grid-template-rows:auto 31px;gap:3px}
+ .top .brand{gap:5px}.brand-icon{width:28px;height:28px;font-size:18px}.brand strong{font-size:clamp(11px,3.4vw,14px);white-space:normal}.brand small{display:none}
+ .top .score,.top .combo,.top .icon-btn{height:31px}.donate-launch{padding:4px 8px}
+ .tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;overflow:visible;min-height:0;scroll-snap-type:none}
+ .tabs .tab{min-width:0;width:100%;height:auto;min-height:34px;padding:5px 2px;font-size:11px;line-height:1.15;white-space:normal;overflow-wrap:anywhere;border-radius:8px}
+ .tabs .tab[data-mode="draw"]{grid-column:span 2}
+ .game-layout{display:flex;flex-direction:column;gap:5px}
+ .board-panel,.info-panel{display:contents}
+ .board-header{order:1;width:100%;min-height:28px;padding:3px 6px;font-size:13px;gap:4px;background:#fffff9;border-radius:9px}
+ .challenge{font-size:14px;padding:4px 8px;text-align:right}
+ .info-panel h1{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ .info-panel #description{order:2;display:block;padding:2px 6px;margin:0;font-size:12px;line-height:1.3;color:var(--ink)}
+ .board-panel .board-wrap{order:3;align-self:center;width:min(100%,510px,max(240px,calc(100dvh - var(--chess-telegram-clear-top,0px) - var(--chess-telegram-clear-bottom,0px) - 275px)));aspect-ratio:1/1;container-type:inline-size}
+ .board .piece{font-size:clamp(19px,10.4cqw,53px)}
+ .game-buttons{order:4;width:100%;gap:4px}.game-buttons .button{min-height:38px;font-size:12px;padding:5px 3px}
+ .info-panel .hint-message{order:5;padding:6px 9px;font-size:12px}
+ .info-panel .notice{order:6;min-height:0;padding:6px 9px;font-size:12px;line-height:1.3}
+ .info-panel .level-panel{order:7;padding:7px 9px}.info-panel .school-mini{order:8}.info-panel .stats{order:9}.info-panel .foot{order:10}
+ .info-panel .eyebrow{display:none}
+}
+@media(max-width:360px){.tabs .tab{font-size:10px}.top .score small{display:none}}

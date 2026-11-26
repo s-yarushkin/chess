@@ -143,6 +143,7 @@ async function refreshMe(){
  $('friendsOptIn').checked=me.friendsOptIn;
  $('friendsOptIn').disabled=!state.features.friendsEnabled;
  $('directoryVisible').checked=!me.directoryVisible;
+ $('remindersEnabled').checked=!!me.remindersEnabled;
  $('directoryVisible').disabled=false;
  $('streak').textContent=me.game.streak;
  const p=me.game.progress;$('levelName').textContent=`Уровень ${me.game.level} · ${me.game.levelName}`;
@@ -169,7 +170,7 @@ async function syncCatalog(){
 function showAttempt(a,message){
  state.attempt=a;state.selected=-1;state.lastMove=[];state.hints=a.hints||0;
  $('hintMessage').hidden=true;
- $('challenge').textContent=labels[state.mode];
+ $('challenge').textContent=labels[a.category]||'Шахматная задача';
  $('title').textContent=labels[a.category]||'Шахматная задача';
  $('description').textContent=a.lesson?.prompt||'Найди сильнейший ход.';
  $('difficulty').textContent=a.rating<650?'Начальный':a.rating<900?'Знакомый':a.rating<1200?'Интересный':'Сложный';
@@ -204,7 +205,7 @@ async function recoverStaleAttempt(){
 }
 async function newPuzzle(){
  if(state.busy)return;state.busy=true;state.selected=-1;state.lastMove=[];state.hints=0;
- $('hintMessage').hidden=true;resetFx();$('challenge').textContent=labels[state.mode];buttonStatus();
+ $('hintMessage').hidden=true;resetFx();$('challenge').textContent='Загружаем задачу…';buttonStatus();
  try{
   const params=state.mode==='progressive'?{mode:'progressive'}:{mode:'category',category:state.mode};
   const a=await api('/api/attempts',{method:'POST',body:JSON.stringify(params)});
@@ -438,7 +439,7 @@ async function begin(){
 $('devEnter').addEventListener('click',async()=>{try{const login=await api('/api/auth/dev',{method:'POST',body:JSON.stringify({name:$('devName').value})});
  state.token=login.token;sessionStorage.setItem('chess_session',state.token);$('auth').close();await refreshMe();await newPuzzle();
  }catch(e){$('authError').textContent=e.message;}});
-$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,friendsOptIn:state.features.friendsEnabled&&$('friendsOptIn').checked,directoryVisible:!$('directoryVisible').checked})});
+$('saveProfile').addEventListener('click',async()=>{try{await api('/api/me',{method:'PATCH',body:JSON.stringify({displayName:$('name').value,friendsOptIn:state.features.friendsEnabled&&$('friendsOptIn').checked,directoryVisible:!$('directoryVisible').checked,remindersEnabled:$('remindersEnabled').checked})});
  $('profile').close();await refreshMe();if(!state.attempt)await newPuzzle();}catch(e){$('profileError').textContent=e.message;}});
 
 $('playerSearch').addEventListener('input',()=>{

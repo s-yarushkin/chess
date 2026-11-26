@@ -108,6 +108,12 @@ export async function initDb(){
               (SELECT 1 FROM admin_account_merges m WHERE m.source_user_id=v.id))<=12`);
       }
     });
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reminders_enabled BOOLEAN NOT NULL DEFAULT FALSE');
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS last_activity_at BIGINT');
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reminder_at BIGINT');
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reminder_count INTEGER NOT NULL DEFAULT 0');
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reminder_index INTEGER NOT NULL DEFAULT 0');
+    await db.query('CREATE INDEX IF NOT EXISTS idx_users_reminders ON users(last_activity_at) WHERE reminders_enabled=TRUE');
     await db.query('CREATE INDEX IF NOT EXISTS idx_users_directory ON users(directory_visible,nickname_key) WHERE directory_visible=TRUE');
     await db.query(`CREATE TABLE IF NOT EXISTS league_direct_invitations (
       id UUID PRIMARY KEY,league_id UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
