@@ -109,12 +109,34 @@ export async function initDb(){
       }
     });
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reminders_enabled BOOLEAN NOT NULL DEFAULT FALSE');
-    // New accounts only: preserve every existing player's saved preference.
     await db.query('ALTER TABLE users ALTER COLUMN reminders_enabled SET DEFAULT TRUE');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS last_activity_at BIGINT');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reminder_at BIGINT');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reminder_count INTEGER NOT NULL DEFAULT 0');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reminder_index INTEGER NOT NULL DEFAULT 0');
+    // One-time initialization for accounts from before the original default-on rollout.
+    // Previously sent reminders (including blocked recipients) and accounts with a
+    // recorded visit since reminder settings were introduced keep their preference.
+    await tx(async client=>{
+      await client.query("SELECT pg_advisory_xact_lock(73522,2)");
+      const migration=await client.query("INSERT INTO schema_migrations(name) VALUES('reminders-existing-default-v1') ON CONFLICT DO NOTHING RETURNING name");
+      if(migration.rowCount){
+        await client.query(`UPDATE users u SET reminders_enabled=TRUE
+          WHERE u.reminders_enabled=FALSE AND u.last_activity_at IS NULL
+          AND u.last_reminder_at IS NULL AND u.reminder_count=0
+          AND btrim(u.display_name)<>''
+          AND NOT EXISTS(SELECT 1 FROM admin_account_merges m WHERE m.source_user_id=u.id)`);
+        // The most recent recorded visit/attempt is the inactivity baseline for
+        // older accounts, even when they have never opened the new UI.
+        await client.query(`UPDATE users u SET last_activity_at=GREATEST(
+          u.created_at,
+          COALESCE((SELECT MAX(a.updated_at) FROM attempts a WHERE a.user_id=u.id),u.created_at),
+          COALESCE((SELECT MAX(c.solved_at) FROM completions c WHERE c.user_id=u.id),u.created_at),
+          COALESCE((SELECT MAX(s.expires_at)-2592000000 FROM sessions s WHERE s.user_id=u.id),u.created_at))
+          WHERE u.last_activity_at IS NULL AND btrim(u.display_name)<>''
+          AND NOT EXISTS(SELECT 1 FROM admin_account_merges m WHERE m.source_user_id=u.id)`);
+      }
+    });
     await db.query('CREATE INDEX IF NOT EXISTS idx_users_reminders ON users(last_activity_at) WHERE reminders_enabled=TRUE');
     await db.query('CREATE INDEX IF NOT EXISTS idx_users_directory ON users(directory_visible,nickname_key) WHERE directory_visible=TRUE');
     await db.query(`CREATE TABLE IF NOT EXISTS league_direct_invitations (
