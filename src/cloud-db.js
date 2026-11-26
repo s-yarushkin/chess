@@ -115,14 +115,14 @@ export async function initDb(){
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reminder_count INTEGER NOT NULL DEFAULT 0');
     await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reminder_index INTEGER NOT NULL DEFAULT 0');
     // One-time initialization for accounts from before the original default-on rollout.
-    // Previously sent reminders (including blocked recipients) and accounts with a
-    // recorded visit since reminder settings were introduced keep their preference.
+    // Existing default-false accounts with no previous delivery are initialized once.
+    // Never reset a recipient who has a previous reminder or repeat this migration.
     await tx(async client=>{
       await client.query("SELECT pg_advisory_xact_lock(73522,2)");
       const migration=await client.query("INSERT INTO schema_migrations(name) VALUES('reminders-existing-default-v1') ON CONFLICT DO NOTHING RETURNING name");
       if(migration.rowCount){
         await client.query(`UPDATE users u SET reminders_enabled=TRUE
-          WHERE u.reminders_enabled=FALSE AND u.last_activity_at IS NULL
+          WHERE u.reminders_enabled=FALSE
           AND u.last_reminder_at IS NULL AND u.reminder_count=0
           AND btrim(u.display_name)<>''
           AND NOT EXISTS(SELECT 1 FROM admin_account_merges m WHERE m.source_user_id=u.id)`);

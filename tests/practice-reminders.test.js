@@ -51,10 +51,10 @@ test('Postgres: new accounts default to enabled and a saved opt-out survives sub
  }finally{await db.query('DELETE FROM users WHERE id=$1',[id]);}
 });
 
-test('legacy backfill is one-time and initializes missing activity without resetting recorded preferences',()=>{
+test('legacy backfill is one-time, includes previously active profiles and initializes missing activity',()=>{
  const source=readFileSync(new URL('../src/cloud-db.js',import.meta.url),'utf8');
  assert.match(source,/reminders-existing-default-v1/);
- assert.match(source,/u\.reminders_enabled=FALSE AND u\.last_activity_at IS NULL/);
+ assert.match(source,/WHERE u\.reminders_enabled=FALSE\s+AND u\.last_reminder_at IS NULL/);
  assert.match(source,/u\.last_reminder_at IS NULL AND u\.reminder_count=0/);
  assert.match(source,/MAX\(a\.updated_at\)/);
  assert.match(source,/MAX\(s\.expires_at\)-2592000000/);
