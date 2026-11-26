@@ -50,7 +50,7 @@ export function daytimeMsk(now=Date.now()){
 }
 export function reminderText(index){return '♟ '+TIPS[index%TIPS.length]+'\n\nОтключить напоминания: /stop';}
 export async function recordActivity(userId,now=Date.now(),db=getPool()){
- await db.query('UPDATE users SET last_activity_at=$2,reminder_count=0 WHERE id=$1 AND (last_activity_at IS NULL OR last_activity_at<$2-60000)',[userId,now]);
+ await db.query('UPDATE users SET last_activity_at=$2,reminder_count=0 WHERE id=$1 AND (last_activity_at IS NULL OR last_activity_at<$2::bigint-60000)',[userId,now]);
 }
 export function isStopMessage(m){return m?.chat?.type==='private'&&Number.isSafeInteger(m.chat.id)&&m.chat.id>0&&m.from?.id===m.chat.id&&typeof m.text==='string'&&/^\/(stop|reminders_off)(?:@Chess_by_Alex_bot)?$/i.test(m.text.trim());}
 export async function disableChatReminders(chatId,db=getPool()){
